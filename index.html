@@ -838,6 +838,7 @@
     let allData = [];
     let filteredData = [];
     let selectedAgents = new Set();
+    let knownAgentsEver = new Set();
     let apptChart = null;
     let statusChart = null;
     let monthlyTrendChart = null;
@@ -1285,6 +1286,15 @@
       const agentBox = document.getElementById('agentCheckboxes');
       agentBox.innerHTML = '';
       const agents = getAgentList();
+      // A brand-new agent that shows up after a live sync (never seen before this page load)
+      // defaults to selected, so their tickets aren't silently dropped from the stats until
+      // someone notices and manually checks the new box.
+      agents.forEach(a => {
+        if (!knownAgentsEver.has(a)) {
+          knownAgentsEver.add(a);
+          selectedAgents.add(a);
+        }
+      });
       agents.forEach(a => {
         const div = document.createElement('div');
         div.className = 'checkbox-item flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer';
