@@ -1,0 +1,2762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="theme-color" content="#0a4e9b" />
+  <meta name="description" content="AssetPlus DSAT Performance Hub dashboard for conversion, APPT and agent analytics" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AssetPlus DSAT Hub | MIS Performance</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+
+    :root {
+      --ap-blue: #0a4e9b;
+      --ap-blue-dark: #002e5b;
+      --ap-blue-light: #ccecf8;
+      --ap-red: #e41f26;
+      --ap-green: #d1e5ad;
+      --ap-cream: #faffee;
+      --sidebar-width: 260px;
+    }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .sidebar { width: var(--sidebar-width); transition: all 0.3s; background: linear-gradient(180deg, #002e5b 0%, #0a4e9b 100%) !important; }
+    .main-content { margin-left: var(--sidebar-width); transition: all 0.3s; }
+    .nav-item.active { background: rgba(255,255,255,0.18) !important; color: white !important; border-left: 3px solid #e41f26; }
+    .nav-item:hover:not(.active) { background: rgba(255,255,255,0.1) !important; }
+    .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(10,78,155,0.15); }
+    .table-container { max-height: 480px; overflow: auto; }
+    .table-container table { border-collapse: separate; border-spacing: 0; }
+    .table-container th { position: sticky; top: 0; z-index: 10; background: #f8fafc; }
+    .badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 600; }
+    .modal-backdrop { background: rgba(0, 46, 91, 0.55); backdrop-filter: blur(4px); }
+    .form-input:focus { outline: none; border-color: #0a4e9b !important; box-shadow: 0 0 0 3px rgba(10,78,155,0.15); }
+    #agentDropdown { max-height: 220px; overflow-y: auto; }
+    .checkbox-item:hover { background: #f1f5f9; }
+    .page { display: none !important; }
+    .page.active { display: block !important; }
+    .btn-primary { background: #0a4e9b !important; }
+    .btn-primary:hover { background: #002e5b !important; }
+    .brand-logo-mark { width: 36px; height: 36px; flex-shrink: 0; }
+    @media (max-width: 1024px) {
+      .sidebar { transform: translateX(-100%); position: fixed; z-index: 50; height: 100vh; }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+    }
+
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar fixed top-0 left-0 h-full bg-slate-900 text-white flex flex-col z-40">
+    <div class="p-5 border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <svg class="brand-logo-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="AssetPlus">
+  <path d="M32 4C32 4 56 52 56 52H44L32 28L20 52H8L32 4Z" fill="white"/>
+  <path d="M20 52L32 28C26 34 16 46 12 52H20Z" fill="#e41f26"/>
+</svg>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white leading-tight">AssetPlus</h1>
+          <p class="text-[11px] text-blue-100/80">DSAT MIS Hub</p>
+        </div>
+      </div>
+      <p class="text-[10px] text-blue-200/60 mt-2">PARTNER. GROW. SUCCEED.</p>
+    </div>
+    <nav class="flex-1 p-3 space-y-1">
+      <button onclick="showPage('mis')" class="nav-item active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all" data-page="mis">
+        <i class="fas fa-chart-pie w-5"></i> MIS Dashboard
+      </button>
+      <button onclick="showPage('search')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300" data-page="search">
+        <i class="fas fa-search w-5"></i> Ticket Search
+      </button>
+      <button onclick="showPage('monthly')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300" data-page="monthly">
+        <i class="fas fa-calendar-alt w-5"></i> Monthly Performance
+      </button>
+      <button onclick="showPage('conversion')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300" data-page="conversion">
+        <i class="fas fa-percentage w-5"></i> Conversion
+      </button>
+      <button onclick="showPage('add')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-300" data-page="add">
+        <i class="fas fa-phone-alt w-5"></i> Calling Log / Add Data
+      </button>
+    </nav>
+    <div class="p-4 border-t border-white/10 text-xs text-slate-500">
+      AssetPlus DSAT MIS v6.6<br>Internal use only
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content min-h-screen">
+    <!-- Top bar -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-slate-100">
+          <i class="fas fa-bars text-slate-600"></i>
+        </button>
+        <div>
+          <h2 id="pageTitle" class="text-xl font-bold text-slate-800">DSAT Performance Hub</h2>
+          <p class="text-xs text-slate-500">All DSAT records • Rating 1, 2 & 3 considered DSAT • Search, update, analyse and export</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <span id="syncStatus" class="text-[11px] text-slate-400"></span>
+        <button id="refreshSheetBtn" onclick="loadLiveData(true)" class="flex items-center gap-2 bg-[#0a4e9b] hover:bg-[#002e5b] text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition">
+          <i id="refreshSheetIcon" class="fas fa-rotate"></i> Refresh from Sheet
+        </button>
+        <button onclick="downloadExcel()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition">
+          <i class="fas fa-file-excel"></i> Download Excel
+        </button>
+      </div>
+    </header>
+
+    <main class="p-6">
+      <!-- ==================== MIS PAGE ==================== -->
+      <div id="page-mis" class="page active">
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-10 gap-3 mb-6">
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Actual Count</p>
+            <p id="statDsat" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Total DSAT (1–3)</p>
+          </div>
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <p class="text-xs font-semibold text-violet-600 uppercase tracking-wider">Callable</p>
+            <p id="statCallable" class="text-2xl font-bold text-violet-600 mt-1">0</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Agreed + Not Agreed + RNR</p>
+          </div>
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">NC (Not Callable)</p>
+            <p id="statNc" class="text-2xl font-bold text-slate-500 mt-1">0</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Not connected / irate</p>
+          </div>
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Connected</p>
+            <p id="statConnected" class="text-2xl font-bold text-blue-600 mt-1">0</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Agreed + Not Agreed</p>
+          </div>
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Agreed</p>
+            <p id="statAgreed" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+          </div>
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <p class="text-xs font-semibold text-red-500 uppercase tracking-wider">Not Agreed</p>
+            <p id="statNotAgreed" class="text-2xl font-bold text-red-500 mt-1">0</p>
+          </div>
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
+            <p class="text-xs font-semibold text-amber-600 uppercase tracking-wider">RNR</p>
+            <p id="statRnr" class="text-2xl font-bold text-amber-500 mt-1">0</p>
+          </div>
+          <div class="stat-card bg-emerald-50 rounded-2xl p-4 shadow-sm border border-emerald-100">
+            <p class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Converted</p>
+            <p id="statConverted" class="text-2xl font-bold text-emerald-700 mt-1">0</p>
+            <p class="text-[10px] text-emerald-600 mt-0.5">Agreed &amp; Rev &gt; CSAT</p>
+          </div>
+          <div class="stat-card bg-[#ccecf8]/40 rounded-2xl p-4 shadow-sm border border-[#0a4e9b]/30">
+            <p class="text-xs font-semibold text-[#0a4e9b] uppercase tracking-wider">Converted %</p>
+            <p id="statConversion" class="text-2xl font-bold text-[#002e5b] mt-1">0%</p>
+            <p id="statConversionDetail" class="text-[11px] text-[#0a4e9b] mt-0.5 font-medium">0 / 0 Callable</p>
+          </div>
+          <div class="stat-card bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+            <p class="text-xs font-semibold text-slate-600 uppercase tracking-wider">vs Actual Count</p>
+            <p id="statDsatConvPct" class="text-2xl font-bold text-slate-800 mt-1">0%</p>
+            <p id="statDsatConvDetail" class="text-[11px] text-slate-500 mt-0.5 font-medium">0 / 0 Actual</p>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+              <i class="fas fa-filter text-[#0a4e9b]"></i> Search Ticket & MIS Filters
+            </h3>
+            <button onclick="resetFilters()" class="text-sm text-[#0a4e9b] hover:text-blue-800 font-medium flex items-center gap-1">
+              <i class="fas fa-redo-alt text-xs"></i> Reset Filters
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Ticket No / ARN / Partner</label>
+              <input id="filterSearch" type="text" placeholder="Search ticket, ARN, partner..." class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white" oninput="applyFilters()" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Month</label>
+              <select id="filterMonth" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white" onchange="applyFilters()">
+                <option value="">All Months</option>
+              </select>
+            </div>
+            <div class="relative">
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Support Agents</label>
+              <button type="button" onclick="toggleAgentDropdown()" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 text-left flex justify-between items-center">
+                <span id="agentBtnText">All Support Agents</span>
+                <i class="fas fa-chevron-down text-xs text-slate-400"></i>
+              </button>
+              <div id="agentDropdown" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg p-2">
+                <div class="flex gap-2 mb-2 sticky top-0 bg-white pb-2 border-b">
+                  <button onclick="selectAllAgents(true)" class="text-xs bg-[#ccecf8]/30 text-[#002e5b] px-2 py-1 rounded-lg font-medium">Select All</button>
+                  <button onclick="selectAllAgents(false)" class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-lg font-medium">Clear</button>
+                </div>
+                <div id="agentCheckboxes"></div>
+              </div>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">APPT Categories</label>
+              <select id="filterAppt" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white" onchange="applyFilters()">
+                <option value="">All APPT Categories</option>
+                <option value="Agent">Agent</option>
+                <option value="Partner">Partner</option>
+                <option value="Process">Process</option>
+                <option value="Tech">Tech</option>
+                <option value="B2C">B2C</option>
+                <option value="BSE">BSE</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+              <i class="fas fa-chart-pie text-[#0a4e9b]"></i> APPT Classification Breakdown
+            </h3>
+            <div class="h-80 relative">
+              <canvas id="apptChart"></canvas>
+            </div>
+            <div id="apptLegend" class="flex flex-wrap gap-3 mt-3 justify-center text-xs"></div>
+          </div>
+          
+        </div>
+
+        <!-- Charts Row 2 - Month-wise comparisons -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+              <i class="fas fa-chart-line text-[#0a4e9b]"></i> Month-wise: Total DSAT vs Callable vs Connected
+            </h3>
+            <div class="h-72 relative">
+              <canvas id="dsatVsCallableChart"></canvas>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+              <i class="fas fa-percentage text-[#0a4e9b]"></i> Month-wise: Agreed vs Conversion %
+            </h3>
+            <div class="h-72 relative">
+              <canvas id="agreedVsConvChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row 3 - Conversion trend chronological -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
+          <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
+            <i class="fas fa-chart-area text-[#0a4e9b]"></i> Month-wise Conversion Trend (Chronological)
+          </h3>
+          <div class="h-72 relative">
+            <canvas id="mainConvTrendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Breakdown charts: APPT / Reason / Agent / Classification -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+              <i class="fas fa-project-diagram text-[#0a4e9b]"></i> Dimension Breakdown
+            </h3>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="breakdownDim" class="form-input px-3 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50" onchange="renderBreakdown()">
+                <option value="appt">APPT wise</option>
+                <option value="reason_remarks">Reason Remarks wise</option>
+                <option value="support_agent">Agent wise</option>
+                <option value="classification">Classification wise</option>
+              </select>
+              <button onclick="downloadBreakdownExcel()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl text-sm font-semibold">
+                <i class="fas fa-file-excel"></i> Download Breakdown Excel
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <h4 class="text-sm font-medium text-slate-600 mb-2">Volume by dimension</h4>
+              <div class="h-72 relative"><canvas id="breakdownVolChart"></canvas></div>
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-slate-600 mb-2">Conversion % by dimension (Converted ÷ Callable)</h4>
+              <div class="h-72 relative"><canvas id="breakdownConvChart"></canvas></div>
+            </div>
+          </div>
+          <div class="mt-4 table-container border border-slate-100 rounded-xl" style="max-height:280px">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                  <th class="px-3 py-2">Dimension</th>
+                  <th class="px-3 py-2">Total DSAT</th>
+                  <th class="px-3 py-2">Callable</th>
+                  <th class="px-3 py-2">Agreed</th>
+                  <th class="px-3 py-2">Not Agreed</th>
+                  <th class="px-3 py-2">RNR</th>
+                  <th class="px-3 py-2">NC</th>
+                  <th class="px-3 py-2">Conversion %</th>
+                </tr>
+              </thead>
+              <tbody id="breakdownTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-semibold text-slate-700">Records <span id="recordCount" class="text-slate-400 font-normal text-sm">(0)</span></h3>
+            <div class="text-xs text-slate-500">Showing filtered results</div>
+          </div>
+          <div class="table-container">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th class="px-4 py-3">Ticket</th>
+                  <th class="px-4 py-3">Month</th>
+                  <th class="px-4 py-3">Agent</th>
+                  <th class="px-4 py-3">CSAT</th>
+                  <th class="px-4 py-3">Revised</th>
+                  <th class="px-4 py-3">APPT</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3">Partner / ARN</th>
+                  <th class="px-4 py-3">Classification</th>
+                  <th class="px-4 py-3">Done By</th>
+                </tr>
+              </thead>
+              <tbody id="dataTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TICKET SEARCH PAGE ==================== -->
+      <div id="page-search" class="page">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+          <h3 class="font-semibold text-lg mb-4">Advanced Ticket Search</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <input id="searchTicket" type="text" placeholder="Ticket Number" class="form-input px-4 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            <input id="searchArn" type="text" placeholder="ARN" class="form-input px-4 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            <input id="searchPartner" type="text" placeholder="Partner Name" class="form-input px-4 py-2.5 border border-slate-200 rounded-xl text-sm" />
+          </div>
+          <button onclick="runTicketSearch()" class="btn-primary hover:opacity-95 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
+            <i class="fas fa-search mr-2"></i>Search
+          </button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="table-container">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs font-semibold text-slate-500 uppercase">
+                  <th class="px-4 py-3">Ticket</th>
+                  <th class="px-4 py-3">Month</th>
+                  <th class="px-4 py-3">Agent</th>
+                  <th class="px-4 py-3">Manager</th>
+                  <th class="px-4 py-3">CSAT</th>
+                  <th class="px-4 py-3">Revised</th>
+                  <th class="px-4 py-3">APPT</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3">Partner</th>
+                  <th class="px-4 py-3">Comments</th>
+                  <th class="px-4 py-3">Detailed Explanation</th>
+                </tr>
+              </thead>
+              <tbody id="searchTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== MONTHLY PERFORMANCE ==================== -->
+      <div id="page-monthly" class="page">
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6">
+          <div class="flex flex-wrap items-center gap-4">
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Select Month</label>
+              <select id="monthlyMonth" class="form-input px-4 py-2.5 border border-slate-200 rounded-xl text-sm" onchange="renderMonthly()"></select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Compare Agent</label>
+              <select id="monthlyAgent" class="form-input px-4 py-2.5 border border-slate-200 rounded-xl text-sm" onchange="renderMonthly()">
+                <option value="">All Agents</option>
+              </select>
+            </div>
+            <div class="self-end">
+              <button onclick="openAgentDrilldown('', document.getElementById('monthlyMonth').value)" class="flex items-center gap-2 border border-[#0a4e9b] text-[#0a4e9b] hover:bg-[#0a4e9b] hover:text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition">
+                <i class="fas fa-list"></i> View All Tickets (Selected Month)
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="monthlyStats"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 class="font-semibold mb-4">Month-wise Conversion Trend</h3>
+            <div class="h-64"><canvas id="monthlyTrendChart"></canvas></div>
+          </div>
+          
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-5 py-4 border-b font-semibold">Agent Summary</div>
+          <div class="table-container">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs font-semibold text-slate-500 uppercase">
+                  <th class="px-4 py-3">Agent</th>
+                  <th class="px-4 py-3">Manager</th>
+                  <th class="px-4 py-3">Total DSAT</th>
+                  <th class="px-4 py-3">Callable</th>
+                  <th class="px-4 py-3">Agreed</th>
+                  <th class="px-4 py-3">Not Agreed</th>
+                  <th class="px-4 py-3">RNR</th>
+                  <th class="px-4 py-3">NC</th>
+                  <th class="px-4 py-3">Conversion %</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyAgentTable" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ==================== CONVERSION TAB ==================== -->
+      <div id="page-conversion" class="page">
+        <div class="mb-4 flex flex-wrap items-center gap-4">
+          <div>
+            <label class="text-xs font-medium text-slate-500 mb-1 block">Month</label>
+            <select id="convMonth" class="form-input px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white" onchange="renderConversionTab()">
+              <option value="">All Months</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-500 mb-1 block">Support Agent</label>
+            <select id="convAgent" class="form-input px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white" onchange="renderConversionTab()">
+              <option value="">All Agents</option>
+            </select>
+          </div>
+        </div>
+
+
+        <!-- Supporting metrics -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+          <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+            <p class="text-xs text-slate-500 uppercase">Actual Count</p>
+            <p id="convKpiActual" class="text-2xl font-bold text-slate-800">0</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+            <p class="text-xs text-slate-500 uppercase">Agreed</p>
+            <p id="convKpiAgreed" class="text-2xl font-bold text-emerald-600">0</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+            <p class="text-xs text-slate-500 uppercase">Not Agreed</p>
+            <p id="convKpiNotAgreed" class="text-2xl font-bold text-red-500">0</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+            <p class="text-xs text-slate-500 uppercase">RNR</p>
+            <p id="convKpiRnr" class="text-2xl font-bold text-amber-500">0</p>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+            <p class="text-xs text-slate-500 uppercase">NC (Not Callable)</p>
+            <p id="convKpiNc" class="text-2xl font-bold text-slate-500">0</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 class="font-semibold text-slate-700 mb-4">Month-wise Converted %</h3>
+            <div class="h-72"><canvas id="convMonthChart"></canvas></div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+            <h3 class="font-semibold text-slate-700 mb-4">Callable vs Converted (by Month)</h3>
+            <div class="h-72"><canvas id="convBarChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-5 py-4 border-b font-semibold text-slate-700">Month-wise Conversion Table</div>
+          <div class="table-container">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                  <th class="px-4 py-3">Month</th>
+                  <th class="px-4 py-3">Actual Count</th>
+                  <th class="px-4 py-3">Callable</th>
+                  <th class="px-4 py-3">NC</th>
+                  <th class="px-4 py-3">Agreed</th>
+                  <th class="px-4 py-3">Not Agreed</th>
+                  <th class="px-4 py-3">RNR</th>
+                  <th class="px-4 py-3">Converted</th>
+                  <th class="px-4 py-3">Converted %</th>
+                </tr>
+              </thead>
+              <tbody id="convTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6 mt-6">
+          <h3 class="font-semibold text-slate-800 mb-1">Manager-wise — Actual Count &amp; Conversion %</h3>
+          <p class="text-xs text-slate-500 mb-4">Manager rows × Month columns (Actual Count | Conversion %)</p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="convManagerPivotTable">
+              <thead id="convManagerPivotHead"></thead>
+              <tbody id="convManagerTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== ADD DATA PAGE ==================== -->
+      <div id="page-add" class="page">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-4xl">
+          <h3 class="font-semibold text-lg mb-1">Add New DSAT Record</h3>
+          <p class="text-sm text-slate-500 mb-6">New records will automatically appear in MIS Dashboard & filters.</p>
+          <form id="addForm" onsubmit="handleAddSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Ticket No *</label>
+              <input name="ticket_no" required class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Month *</label>
+              <select name="month" required class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" id="addMonthSelect">
+                <option value="">Select Month</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">CSAT (1-3) *</label>
+              <select name="csat" required class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Support Agent *</label>
+              <select name="support_agent" required class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" id="addAgentSelect">
+                <option value="">Select Agent</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">APPT *</label>
+              <select name="appt" required class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+                <option value="Agent">Agent</option>
+                <option value="Partner" selected>Partner</option>
+                <option value="Process">Process</option>
+                <option value="Tech">Tech</option>
+                <option value="B2C">B2C</option>
+                <option value="BSE">BSE</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Agreed / Status *</label>
+              <select name="agreed_status" required class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+                <option value="Agreed">Agreed</option>
+                <option value="Not Agreed">Not Agreed</option>
+                <option value="RNR">RNR (Callable)</option>
+                <option value="NC">NC (Not Connected)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Revised Rating (3/4/5)</label>
+              <select name="revised_rating" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
+                <option value="">—</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Done By</label>
+              <input name="done_by" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" placeholder="e.g. Darshan" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">ARN</label>
+              <input name="arn" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Partner Name</label>
+              <input name="partner_name" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Classification</label>
+              <input name="classification" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Reason / Remarks</label>
+              <input name="reason_remarks" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-medium text-slate-500 mb-1 block">Comments</label>
+              <textarea name="comments" rows="2" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm"></textarea>
+            </div>
+            <div class="md:col-span-2 flex gap-3 pt-2">
+              <button type="submit" class="btn-primary hover:opacity-95 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">
+                <i class="fas fa-save mr-2"></i>Save Record
+              </button>
+              <button type="button" onclick="document.getElementById('addForm').reset()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-sm font-semibold">
+                Clear
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Quick Add Month -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-4xl mt-6">
+          <h3 class="font-semibold text-lg mb-3">Add New Month (for upcoming data)</h3>
+          <div class="flex gap-3 items-end">
+            <div class="flex-1">
+              <label class="text-xs font-medium text-slate-500 mb-1 block">New Month Label (e.g. Oct'26)</label>
+              <input id="newMonthInput" type="text" placeholder="Oct'26" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm" />
+            </div>
+            <button onclick="addNewMonth()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
+              <i class="fas fa-calendar-plus mr-2"></i>Add Month
+            </button>
+          </div>
+          <p class="text-xs text-slate-500 mt-2">After adding month, it will appear in all Month dropdowns. Then add tickets for that month.</p>
+        </div>
+
+        <!-- Import + Manual Update -->
+        
+        <!-- Manage Agents -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-6xl mt-6">
+          <h3 class="font-semibold text-lg mb-1">Manage Agents</h3>
+          <p class="text-sm text-slate-500 mb-4">Add new support agents so they appear in all dropdowns (Add Ticket, filters, Calling Log).</p>
+          <div class="flex flex-wrap items-end gap-3 mb-3">
+            <div class="flex-1 min-w-[200px]">
+              <label class="text-xs font-medium text-slate-500 mb-1 block">New agent name</label>
+              <input id="newAgentInput" type="text" placeholder="e.g. rahul.k" class="form-input w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();addNewAgent();}" />
+            </div>
+            <button type="button" onclick="addNewAgent()" class="btn-primary text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
+              <i class="fas fa-user-plus mr-1"></i> Add Agent
+            </button>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-1.5">Custom agents added</p>
+            <div id="customAgentList" class="flex flex-wrap"></div>
+          </div>
+        </div>
+        <!-- Manager–Agent reference -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 max-w-6xl mt-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+              <i class="fas fa-users text-[#0a4e9b]"></i> Manager-wise Agents
+            </h3>
+            <button type="button" onclick="ensureManagersOnData(true);saveData();applyFilters();renderManualUpdateTable();renderManagerReference();alert('Managers refreshed on all tickets from current mapping.');" class="text-xs font-semibold text-[#0a4e9b] border border-[#0a4e9b]/30 px-3 py-1.5 rounded-lg hover:bg-[#0a4e9b]/5">
+              Refresh managers on all data
+            </button>
+          </div>
+          <div id="managerRefGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 text-sm mb-4"></div>
+          <div class="border-t border-slate-100 pt-4">
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Move agent to another manager</p>
+            <div class="flex flex-wrap items-end gap-3">
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">Agent key</label>
+                <select id="reassignAgentSelect" class="form-input px-3 py-2 border border-slate-200 rounded-xl text-sm min-w-[160px]"></select>
+              </div>
+              <div>
+                <label class="text-xs text-slate-500 mb-1 block">New manager</label>
+                <select id="reassignManagerSelect" class="form-input px-3 py-2 border border-slate-200 rounded-xl text-sm min-w-[200px]">
+                  <option value="Arun Pandi R M">Arun Pandi R M</option>
+                  <option value="Mohammed Shoaib Hussain L">Mohammed Shoaib Hussain L</option>
+                  <option value="Sadham Khaleel Hussain">Sadham Khaleel Hussain</option>
+                  <option value="John Bosco J">John Bosco J</option>
+                </select>
+              </div>
+              <button type="button" onclick="doReassignAgent()" class="btn-primary text-white px-4 py-2 rounded-xl text-sm font-semibold">
+                Move Agent
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-w-6xl mt-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-lg">Daily Import & Manual Update</h3>
+              <p class="text-sm text-slate-500">Upload Excel/CSV daily. Fill: <strong>Month, Revised rating, APPT, Reason Remarks, Detailed Explanation, Agreed/Not agreed, Done by</strong>. Delete duplicates with the Delete button.</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <label class="flex items-center gap-2 bg-[#0a4e9b] hover:bg-[#002e5b] text-white px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer">
+                <i class="fas fa-file-import"></i> Upload File
+                <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleImport(event)" />
+              </label>
+              <button type="button" onclick="downloadManualData()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold">
+                <i class="fas fa-download"></i> Download Updated Data
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-sm text-amber-800">
+            <strong>How it works:</strong> 1) Download sample or use your daily export → 2) Upload here → 3) New tickets appear below → 4) Manually set APPT / Status / Revised rating / Done by → 5) Click Save Updates. Existing tickets (same Ticket No) are skipped.
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 mb-3">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-slate-500 uppercase">Month</label>
+              <select id="manualMonthFilter" onchange="renderManualUpdateTable()" class="form-input px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white min-w-[140px]">
+                <option value="">All Months</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-slate-500 uppercase">Agreed / Status</label>
+              <select id="manualStatusFilter" onchange="renderManualUpdateTable()" class="form-input px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white min-w-[150px]">
+                <option value="">All Status</option>
+                <option value="Agreed">Agreed</option>
+                <option value="Not Agreed">Not Agreed</option>
+                <option value="RNR">RNR</option>
+                <option value="NC">NC</option>
+                <option value="__blank__">Blank / Pending</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-semibold text-slate-500 uppercase">Manager</label>
+              <select id="manualManagerFilter" onchange="renderManualUpdateTable()" class="form-input px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white min-w-[180px]">
+                <option value="">All Managers</option>
+                <option value="Arun Pandi R M">Arun Pandi R M</option>
+                <option value="Mohammed Shoaib Hussain L">Mohammed Shoaib Hussain L</option>
+                <option value="Sadham Khaleel Hussain">Sadham Khaleel Hussain</option>
+                <option value="John Bosco J">John Bosco J</option>
+                <option value="__blank__">No Manager</option>
+              </select>
+            </div>
+            <span id="pendingCount" class="text-sm font-medium text-slate-600">0 records pending manual update</span>
+            <button type="button" onclick="findDuplicates()" class="px-4 py-2.5 rounded-xl text-sm font-semibold border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 mr-2">
+              <i class="fas fa-copy"></i> Find Duplicates
+            </button>
+            <button onclick="saveManualUpdates()" class="btn-primary hover:opacity-95 text-white px-4 py-2 rounded-xl text-sm font-semibold">
+              <i class="fas fa-save mr-1"></i> Save Data
+            </button>
+            <button onclick="filterPendingOnly()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl text-sm">Show Pending Only</button>
+          </div>
+
+          <div class="table-container border border-slate-200 rounded-xl" style="max-height:420px">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                  <th class="px-3 py-2.5">Ticket</th>
+                  <th class="px-3 py-2.5">Month</th>
+                  <th class="px-3 py-2.5">Agent</th>
+                  <th class="px-2 py-2.5 w-28 max-w-[7rem]">Manager</th>
+                  <th class="px-3 py-2.5">CSAT</th>
+                  <th class="px-3 py-2.5">Partner</th>
+                  <th class="px-3 py-2.5">Revised Rating</th>
+                  <th class="px-3 py-2.5">APPT</th>
+                  <th class="px-3 py-2.5">Reason Remarks</th>
+                  <th class="px-3 py-2.5">Detailed Explanation</th>
+                  <th class="px-3 py-2.5">Agreed / Status</th>
+                  <th class="px-3 py-2.5">Done By</th>
+                  <th class="px-3 py-2.5">Action</th>
+                </tr>
+              </thead>
+              <tbody id="manualUpdateBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Modal (quick) -->
+  <div id="addModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b flex justify-between items-center">
+        <h3 class="font-bold text-lg">Quick Add Ticket</h3>
+        <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5">
+        <p class="text-sm text-slate-500 mb-4">Use the full form on <strong>Calling Log / Add Data</strong> page for complete fields. Quick add below:</p>
+        <form id="quickAddForm" onsubmit="handleQuickAdd(event)" class="space-y-3">
+          <input name="ticket_no" required placeholder="Ticket No *" class="form-input w-full px-3 py-2.5 border rounded-xl text-sm" />
+          <select name="month" required id="quickMonth" class="form-input w-full px-3 py-2.5 border rounded-xl text-sm"></select>
+          <select name="support_agent" required id="quickAgent" class="form-input w-full px-3 py-2.5 border rounded-xl text-sm"></select>
+          <select name="appt" required class="form-input w-full px-3 py-2.5 border rounded-xl text-sm">
+            <option value="Partner">Partner</option>
+            <option value="Agent">Agent</option>
+            <option value="Process">Process</option>
+            <option value="Tech">Tech</option>
+            <option value="B2C">B2C</option>
+            <option value="BSE">BSE</option>
+          </select>
+          <select name="agreed_status" required class="form-input w-full px-3 py-2.5 border rounded-xl text-sm">
+            <option value="Agreed">Agreed</option>
+            <option value="Not Agreed">Not Agreed</option>
+            <option value="RNR">RNR</option>
+            <option value="NC">NC</option>
+          </select>
+          <select name="csat" class="form-input w-full px-3 py-2.5 border rounded-xl text-sm">
+            <option value="3">CSAT 3</option>
+            <option value="2">CSAT 2</option>
+            <option value="1">CSAT 1</option>
+          </select>
+          <button type="submit" class="w-full btn-primary hover:opacity-95 text-white py-2.5 rounded-xl font-semibold text-sm">Save</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="agentDrilldownModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+        <div>
+          <h3 id="agentDrilldownTitle" class="font-bold text-lg">Agent Tickets</h3>
+          <p id="agentDrilldownSubtitle" class="text-xs text-slate-500 mt-0.5"></p>
+        </div>
+        <button onclick="closeAgentDrilldown()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5">
+        <div class="table-container border border-slate-100 rounded-xl">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs font-semibold text-slate-500 uppercase">
+                <th class="px-4 py-3">Ticket</th>
+                <th class="px-4 py-3">Month</th>
+                <th class="px-4 py-3">Agent</th>
+                <th class="px-4 py-3">CSAT</th>
+                <th class="px-4 py-3">Revised</th>
+                <th class="px-4 py-3">APPT</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Partner</th>
+                <th class="px-4 py-3">Comments</th>
+                <th class="px-4 py-3">Detailed Explanation</th>
+              </tr>
+            </thead>
+            <tbody id="agentDrilldownBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== DATA =====================
+    let allData = [];
+    let filteredData = [];
+    let selectedAgents = new Set();
+    let apptChart = null;
+    let statusChart = null;
+    let monthlyTrendChart = null;
+    let agentPerfChart = null;
+    let dsatVsCallableChart = null;
+    let agreedVsConvChart = null;
+    let mainConvTrendChart = null;
+    let breakdownVolChart = null;
+    let breakdownConvChart = null;
+
+    
+    // Proper chronological month order (not alphabetical)
+    const MONTH_ORDER = ["Jan'26","Feb'26","Mar'26","Apr'26","May'26","Jun'26","Jul'26","Aug'26","Sep'26","Oct'26","Nov'26","Dec'26",
+                         "Jan'27","Feb'27","Mar'27","Apr'27","May'27","Jun'27","Jul'27","Aug'27","Sep'27","Oct'27","Nov'27","Dec'27"];
+    function sortMonths(months) {
+      return [...months].sort((a, b) => {
+        const ia = MONTH_ORDER.indexOf(a);
+        const ib = MONTH_ORDER.indexOf(b);
+        if (ia === -1 && ib === -1) return a.localeCompare(b);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+    }
+
+    const ALL_AGENTS = ["saikhul.a","raafid.m","monika.a","shaloni.r","naman.l","priyanka.m","darshan.c","barath.d","prabhat.n","deep.p","susmitha.v","swathi.b","thoufiq.n","vanshi.t","vaishnavi.k","damodhar.b","mayank.chouhan","sowndaryan.m","punam.p","mukesh.r","nishant.k","sarath.k","aishwarya.k","nikita.s","shoaib.l","sadham.k","vyshakh.k","mahi.s"];
+
+    // Manager → agents mapping (match against support_agent, case-insensitive partial)
+    const DEFAULT_MANAGER_MAP = {
+      "Arun Pandi R M": ["darshan.c", "shaloni.r", "barath.d", "priyanka.m", "prabhat.n", "monika.a", "punam.p", "vaishnavi.k", "swathi.b"],
+      "Mohammed Shoaib Hussain L": ["susmitha.v", "mahi.s", "mayank.chouhan", "naman.l", "vanshi.t", "shoaib.l"],
+      "Sadham Khaleel Hussain": ["sowndaryan.m", "mukesh.r", "thoufiq.n", "damodhar.b", "saikhul.a", "deep.p", "raafid.m", "sadham.k", "nishant.k"],
+      "John Bosco J": ["aishwarya.k", "nikita.s", "vyshakh.k", "sarath.k"]
+    };
+
+    function loadManagerMap() {
+      try {
+        const ver = localStorage.getItem('dsat_manager_map_ver');
+        if (ver !== 'v2') {
+          localStorage.setItem('dsat_manager_map', JSON.stringify(DEFAULT_MANAGER_MAP));
+          localStorage.setItem('dsat_manager_map_ver', 'v2');
+          return JSON.parse(JSON.stringify(DEFAULT_MANAGER_MAP));
+        }
+        const saved = JSON.parse(localStorage.getItem('dsat_manager_map') || 'null');
+        if (saved && typeof saved === 'object') return saved;
+      } catch (e) {}
+      return JSON.parse(JSON.stringify(DEFAULT_MANAGER_MAP));
+    }
+
+    let MANAGER_MAP = loadManagerMap();
+
+    function saveManagerMap() {
+      localStorage.setItem('dsat_manager_map', JSON.stringify(MANAGER_MAP));
+    }
+
+    function capitalizeAgent(name) {
+      if (!name) return '';
+      return String(name).split(/([.\s_-]+)/).map(part => {
+        if (/^[.\s_-]+$/.test(part)) return part;
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      }).join('');
+    }
+
+
+    function getManagerForAgent(agent) {
+      if (!agent) return '';
+      const a = String(agent).toLowerCase().trim();
+      const aCompact = a.replace(/\s+/g, '');
+      for (const [mgr, keys] of Object.entries(MANAGER_MAP)) {
+        for (const k of keys) {
+          const kk = String(k).toLowerCase().trim();
+          if (a === kk || aCompact === kk.replace(/\s+/g, '') || a.includes(kk) || kk.includes(a.split('.')[0])) return mgr;
+        }
+      }
+      return '';
+    }
+
+    function ensureManagersOnData(force) {
+      MANAGER_MAP = loadManagerMap();
+      allData.forEach(r => {
+        const auto = getManagerForAgent(r.support_agent);
+        if (force || !r.manager || !String(r.manager).trim()) {
+          if (auto) r.manager = auto;
+        }
+      });
+    }
+
+    function reassignAgentToManager(agentKey, newManager) {
+      agentKey = String(agentKey || '').trim();
+      const keyLower = agentKey.toLowerCase();
+      if (!agentKey || !newManager) return;
+      Object.keys(MANAGER_MAP).forEach(mgr => {
+        MANAGER_MAP[mgr] = (MANAGER_MAP[mgr] || []).filter(k => String(k).toLowerCase() !== keyLower);
+      });
+      if (!MANAGER_MAP[newManager]) MANAGER_MAP[newManager] = [];
+      if (!MANAGER_MAP[newManager].map(k => String(k).toLowerCase()).includes(keyLower)) {
+        MANAGER_MAP[newManager].push(agentKey);
+      }
+      saveManagerMap();
+      allData.forEach(r => {
+        const a = String(r.support_agent || '').toLowerCase().trim();
+        if (a === keyLower || a.includes(keyLower.split('.')[0])) r.manager = newManager;
+      });
+      saveData();
+      ensureManagersOnData(true);
+      populateFilters();
+      applyFilters();
+      renderManualUpdateTable();
+      renderManagerReference();
+      alert('Agent "' + capitalizeAgent(agentKey) + '" moved to ' + newManager);
+    }
+
+
+
+    
+    function getAgentList() {
+      let extra = [];
+      try { extra = JSON.parse(localStorage.getItem('dsat_extra_agents') || '[]'); } catch (e) {}
+      const fromData = (typeof allData !== 'undefined' ? allData : []).map(r => r.support_agent).filter(Boolean);
+      return [...new Set([...ALL_AGENTS, ...extra, ...fromData])].filter(Boolean).sort();
+    }
+
+    function addNewAgent() {
+      const input = document.getElementById('newAgentInput');
+      if (!input) return;
+      let name = (input.value || '').trim().toLowerCase();
+      if (!name) {
+        alert('Please enter agent name (e.g. rahul.k)');
+        return;
+      }
+      name = name.replace(/\s+/g, '.');
+      let extra = [];
+      try { extra = JSON.parse(localStorage.getItem('dsat_extra_agents') || '[]'); } catch (e) {}
+      if (getAgentList().includes(name)) {
+        alert('Agent "' + name + '" already exists.');
+        return;
+      }
+      extra.push(name);
+      localStorage.setItem('dsat_extra_agents', JSON.stringify(extra));
+      input.value = '';
+      if (typeof populateFilters === 'function') populateFilters();
+      if (typeof renderManualUpdateTable === 'function') renderManualUpdateTable();
+      renderCustomAgentList();
+      alert('Agent "' + name + '" added. It will appear in all agent dropdowns.');
+    }
+
+    function removeExtraAgent(name) {
+      let extra = [];
+      try { extra = JSON.parse(localStorage.getItem('dsat_extra_agents') || '[]'); } catch (e) {}
+      extra = extra.filter(a => a !== name);
+      localStorage.setItem('dsat_extra_agents', JSON.stringify(extra));
+      if (typeof populateFilters === 'function') populateFilters();
+      renderCustomAgentList();
+    }
+
+    
+    function renderManagerReference() {
+      MANAGER_MAP = loadManagerMap();
+      const grid = document.getElementById('managerRefGrid');
+      if (!grid) return;
+      const order = ['Arun Pandi R M','Mohammed Shoaib Hussain L','Sadham Khaleel Hussain','John Bosco J'];
+      grid.innerHTML = order.map(mgr => {
+        const agents = (MANAGER_MAP[mgr] || []).slice().sort().join(', ');
+        return '<div class="rounded-xl border border-slate-100 p-3 bg-slate-50">' +
+          '<p class="font-semibold text-[#0a4e9b] mb-1">' + mgr + '</p>' +
+          '<p class="text-xs text-slate-600 leading-relaxed break-words">' + (agents || '—') + '</p></div>';
+      }).join('');
+      const sel = document.getElementById('reassignAgentSelect');
+      if (sel) {
+        // Prefer full ALL_AGENTS list for dropdown
+        let keys = [];
+        if (typeof ALL_AGENTS !== 'undefined') keys = ALL_AGENTS.slice();
+        Object.values(MANAGER_MAP).forEach(list => list.forEach(k => { if (!keys.includes(k)) keys.push(k); }));
+        keys = [...new Set(keys)].sort();
+        sel.innerHTML = keys.map(k => '<option value="' + k + '">' + k + '</option>').join('');
+      }
+    }
+
+    function doReassignAgent() {
+      const agent = document.getElementById('reassignAgentSelect')?.value;
+      const mgr = document.getElementById('reassignManagerSelect')?.value;
+      if (!agent || !mgr) { alert('Select agent and manager'); return; }
+      reassignAgentToManager(agent, mgr);
+    }
+
+    function renderCustomAgentList() {
+      const listEl = document.getElementById('customAgentList');
+      if (!listEl) return;
+      let extra = [];
+      try { extra = JSON.parse(localStorage.getItem('dsat_extra_agents') || '[]'); } catch (e) {}
+      if (!extra.length) {
+        listEl.innerHTML = '<span class="text-xs text-slate-400">No custom agents added yet.</span>';
+        return;
+      }
+      listEl.innerHTML = extra.map(a =>
+        '<span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg text-xs mr-1 mb-1">' +
+        a +
+        ' <button type="button" onclick="removeExtraAgent(\'' + a + '\')" class="text-red-500 hover:text-red-700 font-bold" title="Remove">&times;</button></span>'
+      ).join('');
+    }
+
+
+    const APPT_COLORS = { 'Not Set': '#94a3b8',
+      Agent: '#0a4e9b',
+      Partner: '#0d9488',
+      Process: '#f59e0b',
+      Tech: '#ec4899',
+      B2C: '#8b5cf6',
+      BSE: '#3b82f6'
+    };
+
+    // ===================== INIT =====================
+    const EMBEDDED_DATA = []; // Live data now comes from the Google Sheet sync; this is only a placeholder for the very first load.
+
+// ===================== LIVE GOOGLE SHEET SYNC =====================
+    // Published (File > Share > Publish to web > CSV) link for the "Data Dump" tab.
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSgSlvqG4KyVAyBPU0CkV_VYkP1pM1c6bVmuoP05vc5deTg5ejGGrd4LQFk-t8Mwt8bBcbssNL6Nf1f/pub?gid=1205051871&single=true&output=csv';
+    const SHEET_FIELD_ALIASES = {
+      created_date: ['created date', 'created_date'],
+      month: ['month'],
+      ticket_no: ['ticket no', 'ticket_no', 'ticket'],
+      csat: ['csat'],
+      support_agent: ['support agent', 'support_agent', 'agent'],
+      classification: ['classification'],
+      arn: ['arn'],
+      partner_name: ['partner name', 'partner_name', 'partner'],
+      ticket_closed_at: ['ticket closed at', 'ticket_closed_at'],
+      comments: ['comments'],
+      revised_rating: ['revised rating', 'revised_rating'],
+      appt: ['appt'],
+      reason_remarks: ['reason remarks', 'reason_remarks'],
+      detailed_explanation: ['detailed explanation', 'detailed_explanation'],
+      agreed_status: ['agreed/ not agreed', 'agreed / not agreed', 'agreed_status', 'agreed status'],
+      done_by: ['done by', 'done_by']
+    };
+
+    function normalizeRecord(r) {
+      return {
+        ...r,
+        agreed_status: (r.agreed_status || '').replace('Not agreed', 'Not Agreed'),
+        appt: (r.appt || '').trim(),
+        support_agent: (r.support_agent || '').trim(),
+        month: (r.month || '').trim()
+      };
+    }
+
+    function csvToRecords(csvText) {
+      const wb = XLSX.read(csvText, { type: 'string' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+      if (!rows.length) return [];
+      const headerRow = rows[0].map(h => String(h || '').trim().toLowerCase());
+      const colIndex = {};
+      Object.entries(SHEET_FIELD_ALIASES).forEach(([field, aliases]) => {
+        for (const alias of aliases) {
+          const idx = headerRow.indexOf(alias);
+          if (idx !== -1) { colIndex[field] = idx; break; }
+        }
+      });
+      const records = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const get = (field) => (colIndex[field] !== undefined ? String(row[colIndex[field]] ?? '').trim() : '');
+        const ticket_no = get('ticket_no');
+        if (!ticket_no) continue; // skip blank rows
+        records.push(normalizeRecord({
+          created_date: get('created_date'),
+          calling_date: '',
+          month: get('month'),
+          ticket_no,
+          csat: get('csat') ? Number(get('csat')) : null,
+          support_agent: get('support_agent'),
+          classification: get('classification'),
+          arn: get('arn'),
+          partner_name: get('partner_name'),
+          ticket_closed_at: get('ticket_closed_at'),
+          comments: get('comments'),
+          revised_rating: get('revised_rating') ? Number(get('revised_rating')) : null,
+          appt: get('appt'),
+          reason_remarks: get('reason_remarks'),
+          detailed_explanation: get('detailed_explanation'),
+          agreed_status: get('agreed_status'),
+          done_by: get('done_by')
+        }));
+      }
+      return records;
+    }
+
+    function refreshCurrentPageView() {
+      const activeEl = document.querySelector('.page.active');
+      const page = activeEl ? activeEl.id.replace('page-', '') : 'mis';
+      populateFilters();
+      try {
+        if (page === 'mis' && typeof applyFilters === 'function') applyFilters();
+        if (page === 'monthly' && typeof renderMonthly === 'function') renderMonthly();
+        if (page === 'search' && typeof runTicketSearch === 'function') runTicketSearch();
+        if (page === 'conversion' && typeof renderConversionTab === 'function') renderConversionTab();
+      } catch (err) { console.error('Refresh render error', page, err); }
+      renderMonthly();
+    }
+
+    function setSyncStatus(msg) {
+      const el = document.getElementById('syncStatus');
+      if (el) el.textContent = msg;
+    }
+
+    async function loadLiveData(isManualRefresh) {
+      const icon = document.getElementById('refreshSheetIcon');
+      if (isManualRefresh && icon) icon.classList.add('fa-spin');
+      try {
+        const res = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes('?') ? '&' : '?') + 'cb=' + Date.now());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const csvText = await res.text();
+        const sheetRecords = csvToRecords(csvText);
+        if (!sheetRecords.length) throw new Error('Sheet returned no rows');
+
+        // Preserve any locally-added records (e.g. via "Add Data") not yet present in the sheet.
+        const sheetTicketNos = new Set(sheetRecords.map(r => String(r.ticket_no)));
+        const localOnly = allData.filter(r => !sheetTicketNos.has(String(r.ticket_no)));
+
+        allData = [...localOnly, ...sheetRecords];
+        saveData();
+        refreshCurrentPageView();
+        setSyncStatus('Synced from Google Sheet ' + new Date().toLocaleTimeString());
+      } catch (err) {
+        console.warn('Live sheet sync failed:', err);
+        setSyncStatus('Sync failed — showing last saved data');
+        if (isManualRefresh) alert('Could not refresh from the Google Sheet (check your internet connection). Showing the last saved data instead.');
+      } finally {
+        if (isManualRefresh && icon) icon.classList.remove('fa-spin');
+      }
+    }
+
+    function init() {
+      // Try load from localStorage first (user edits), else from embedded
+      const saved = localStorage.getItem('dsat_hub_data_v41');
+      if (saved) {
+        try {
+          allData = JSON.parse(saved);
+          console.log('Loaded from localStorage:', allData.length);
+        } catch(e) { allData = []; }
+      }
+      if (!allData.length) {
+        allData = EMBEDDED_DATA;
+        console.log('Loaded embedded data:', allData.length);
+      }
+      // Normalize
+      allData = allData.map(normalizeRecord);
+
+      populateFilters();
+      selectAllAgents(true);
+      applyFilters();
+      renderMonthly();
+
+      // Pull the live Google Sheet in the background; re-render once it lands.
+      loadLiveData(false);
+      setInterval(() => loadLiveData(false), 5 * 60 * 1000);
+    }
+
+    function saveData() {
+      localStorage.setItem('dsat_hub_data_v41', JSON.stringify(allData));
+    }
+
+    // ===================== NAV =====================
+    function showPage(page) {
+      // Hide ALL page sections
+      document.querySelectorAll('.page, [id^="page-"]').forEach(p => {
+        p.classList.remove('active');
+        p.style.setProperty('display', 'none', 'important');
+      });
+      // Show selected page only
+      const el = document.getElementById('page-' + page);
+      if (el) {
+        el.classList.add('active');
+        el.style.setProperty('display', 'block', 'important');
+      } else {
+        console.error('Page not found:', page);
+      }
+      // Nav highlight
+      document.querySelectorAll('.nav-item').forEach(n => {
+        n.classList.remove('active');
+        n.classList.add('text-slate-300');
+      });
+      const nav = document.querySelector('.nav-item[data-page="' + page + '"]');
+      if (nav) {
+        nav.classList.add('active');
+        nav.classList.remove('text-slate-300');
+      }
+      const titles = {
+        mis: 'AssetPlus DSAT Performance Hub',
+        search: 'Ticket Search',
+        monthly: 'Monthly Performance',
+        add: 'Calling Log / Add Data',
+        conversion: 'Conversion — Callable & Converted %'
+      };
+      const titleEl = document.getElementById('pageTitle');
+      if (titleEl) titleEl.textContent = titles[page] || 'DSAT Hub';
+      // Render page content
+      try {
+        if (page === 'mis') { if (typeof applyFilters === 'function') applyFilters(); }
+        if (page === 'monthly' && typeof renderMonthly === 'function') renderMonthly();
+        if (page === 'search' && typeof renderSearchResults === 'function') renderSearchResults();
+        if (page === 'add') { if (typeof renderManualUpdateTable === 'function') renderManualUpdateTable(); if (typeof renderCustomAgentList === 'function') renderCustomAgentList(); if (typeof renderManagerReference === 'function') renderManagerReference(); }
+        if (page === 'conversion' && typeof renderConversionTab === 'function') renderConversionTab();
+      } catch (err) { console.error('Page render error', page, err); }
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    // ===================== FILTERS =====================
+    function populateFilters() {
+      let months = [...new Set(allData.map(r => r.month).filter(Boolean))];
+      try {
+        const extra = JSON.parse(localStorage.getItem('dsat_extra_months') || '[]');
+        months = [...new Set([...months, ...extra])];
+      } catch(e){}
+      months = sortMonths(months);
+      const monthSelects = ['filterMonth', 'monthlyMonth', 'addMonthSelect', 'quickMonth'];
+      monthSelects.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const current = sel.value;
+        if (id === 'filterMonth') {
+          sel.innerHTML = '<option value="">All Months</option>';
+        } else if (id === 'monthlyMonth') {
+          sel.innerHTML = '';
+        } else {
+          sel.innerHTML = '<option value="">Select Month</option>';
+        }
+        months.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          sel.appendChild(opt);
+        });
+        if (current && months.includes(current)) sel.value = current;
+        else if (id === 'monthlyMonth' && months.length) sel.value = months[months.length - 1];
+      });
+
+      // Agents
+      const agentBox = document.getElementById('agentCheckboxes');
+      agentBox.innerHTML = '';
+      const agents = getAgentList();
+      agents.forEach(a => {
+        const div = document.createElement('div');
+        div.className = 'checkbox-item flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer';
+        div.innerHTML = `<input type="checkbox" value="${a}" class="agent-cb rounded text-[#0a4e9b]" ${selectedAgents.has(a) ? 'checked' : ''} onchange="onAgentChange()" />
+          <span class="text-sm">${a}</span>`;
+        agentBox.appendChild(div);
+      });
+
+      // Agent selects for forms
+      ['addAgentSelect', 'quickAgent', 'monthlyAgent'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const keepFirst = id === 'monthlyAgent';
+        const first = keepFirst ? sel.options[0] : null;
+        sel.innerHTML = keepFirst ? '<option value="">All Agents</option>' : '<option value="">Select Agent</option>';
+        agents.forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a;
+          opt.textContent = a;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    function toggleAgentDropdown() {
+      document.getElementById('agentDropdown').classList.toggle('hidden');
+    }
+    document.addEventListener('click', e => {
+      const dd = document.getElementById('agentDropdown');
+      const btn = e.target.closest('button');
+      if (!e.target.closest('#agentDropdown') && !(btn && btn.onclick && btn.onclick.toString().includes('toggleAgentDropdown'))) {
+        dd.classList.add('hidden');
+      }
+    });
+
+    function selectAllAgents(select) {
+      selectedAgents.clear();
+      document.querySelectorAll('.agent-cb').forEach(cb => {
+        cb.checked = select;
+        if (select) selectedAgents.add(cb.value);
+      });
+      updateAgentBtnText();
+      applyFilters();
+    }
+
+    function onAgentChange() {
+      selectedAgents.clear();
+      document.querySelectorAll('.agent-cb:checked').forEach(cb => selectedAgents.add(cb.value));
+      updateAgentBtnText();
+      applyFilters();
+    }
+
+    function updateAgentBtnText() {
+      const total = document.querySelectorAll('.agent-cb').length;
+      const n = selectedAgents.size;
+      document.getElementById('agentBtnText').textContent = n === 0 ? 'No agents' : (n === total ? `All Support Agents (${n})` : `${n} Agents selected`);
+    }
+
+    function resetFilters() {
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterMonth').value = '';
+      document.getElementById('filterAppt').value = '';
+      selectAllAgents(true);
+    }
+
+    function applyFilters() {
+      const q = (document.getElementById('filterSearch').value || '').toLowerCase().trim();
+      const month = document.getElementById('filterMonth').value;
+      const appt = document.getElementById('filterAppt').value;
+
+      filteredData = allData.filter(r => {
+        if (month && r.month !== month) return false;
+        if (appt && r.appt !== appt) return false;
+        if (selectedAgents.size && !selectedAgents.has(r.support_agent)) return false;
+        if (q) {
+          const hay = `${r.ticket_no} ${r.arn} ${r.partner_name} ${r.classification} ${r.comments}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      updateStats();
+      renderTable();
+      renderCharts();
+      renderBreakdown();
+    }
+
+    // ===================== STATS LOGIC =====================
+    function computeStats(data) {
+      const total = data.length;
+      const dsat = data.filter(r => [1,2,3].includes(Number(r.csat))).length;
+      const agreed = data.filter(r => r.agreed_status === 'Agreed').length;
+      const notAgreed = data.filter(r => r.agreed_status === 'Not Agreed').length;
+      const rnr = data.filter(r => r.agreed_status === 'RNR').length;
+      const nc = data.filter(r => r.agreed_status === 'NC').length;
+      // Connected = disposition given on call
+      const connected = agreed + notAgreed;
+      // Callable = Agreed + Not Agreed + RNR (NC excluded)
+      const callable = agreed + notAgreed + rnr;
+      // CONVERTED = Agreed AND revised_rating > CSAT (rating improved after call)
+      // Not every Agreed counts as Converted
+      const converted = data.filter(r => {
+        if (r.agreed_status !== 'Agreed') return false;
+        const rev = Number(r.revised_rating);
+        const csat = Number(r.csat);
+        if (!Number.isFinite(rev) || !Number.isFinite(csat)) return false;
+        return rev > csat;
+      }).length;
+      // CONVERSION = Converted / Callable
+      const conversion = callable > 0 ? ((converted / callable) * 100).toFixed(1) : '0.0';
+      const dsatConv = dsat > 0 ? ((converted / dsat) * 100).toFixed(1) : '0.0';
+      return { total, dsat, connected, agreed, notAgreed, rnr, nc, callable, converted, conversion, dsatConv };
+    }
+
+    function updateStats() {
+      const s = computeStats(filteredData);
+      document.getElementById('statDsat').textContent = s.dsat;
+      document.getElementById('statConnected').textContent = s.connected;
+      document.getElementById('statAgreed').textContent = s.agreed;
+      const convEl = document.getElementById('statConverted');
+      if (convEl) convEl.textContent = s.converted;
+      document.getElementById('statNotAgreed').textContent = s.notAgreed;
+      document.getElementById('statRnr').textContent = s.rnr;
+      document.getElementById('statCallable').textContent = s.callable;
+      document.getElementById('statNc').textContent = s.nc;
+      document.getElementById('statConversion').textContent = s.conversion + '%';
+      const det = document.getElementById('statConversionDetail');
+      if (det) det.textContent = s.converted + ' / ' + s.callable + ' Callable';
+      const bc = document.getElementById('bannerConverted');
+      const bcall = document.getElementById('bannerCallable');
+      const bp = document.getElementById('bannerPct');
+      if (bc) bc.textContent = s.converted;
+      if (bcall) bcall.textContent = s.callable;
+      if (bp) bp.textContent = '= ' + s.conversion + '%';
+      const dsatPct = s.dsat > 0 ? Math.round((s.converted / s.dsat) * 1000) / 10 : 0;
+      const elDsatPct = document.getElementById('statDsatConvPct');
+      const elDsatDet = document.getElementById('statDsatConvDetail');
+      if (elDsatPct) elDsatPct.textContent = dsatPct + '%';
+      if (elDsatDet) elDsatDet.textContent = s.converted + ' / ' + s.dsat + ' Actual';
+
+const dsatConvEl = document.getElementById('statDsatConv');
+      if (dsatConvEl) dsatConvEl.textContent = s.dsatConv + '%';
+      document.getElementById('recordCount').textContent = `(${s.total})`;
+    }
+
+    // ===================== TABLE =====================
+    function statusBadge(status) {
+      const map = {
+        'Agreed': 'bg-emerald-100 text-emerald-700',
+        'Not Agreed': 'bg-red-100 text-red-700',
+        'RNR': 'bg-amber-100 text-amber-700',
+        'NC': 'bg-slate-100 text-slate-600'
+      };
+      return `<span class="badge ${map[status] || 'bg-slate-100'}">${status || '—'}</span>`;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('dataTableBody');
+      if (!filteredData.length) {
+        tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-10 text-center text-slate-400">No records match the filters</td></tr>`;
+        return;
+      }
+      // Show max 200 for performance
+      const rows = filteredData.slice(0, 300);
+      tbody.innerHTML = rows.map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2.5 font-medium text-[#0a4e9b]">${r.ticket_no}</td>
+          <td class="px-4 py-2.5">${r.month || '—'}</td>
+          <td class="px-4 py-2.5">${r.support_agent || '—'}</td>
+          <td class="px-4 py-2.5">${r.csat}</td>
+          <td class="px-4 py-2.5">${r.revised_rating != null && r.revised_rating !== '' ? r.revised_rating : '—'}</td>
+          <td class="px-4 py-2.5"><span class="badge" style="background:${APPT_COLORS[r.appt]||'#e2e8f0'}22;color:${APPT_COLORS[r.appt]||'#64748b'}">${r.appt || '—'}</span></td>
+          <td class="px-4 py-2.5">${statusBadge(r.agreed_status)}</td>
+          <td class="px-4 py-2.5 text-xs"><div class="font-medium">${r.partner_name || '—'}</div><div class="text-slate-400">${r.arn || ''}</div></td>
+          <td class="px-4 py-2.5 text-xs max-w-[140px] truncate" title="${r.classification||''}">${r.classification || '—'}</td>
+          <td class="px-4 py-2.5 text-xs">${r.done_by || '—'}</td>
+        </tr>
+      `).join('');
+      if (filteredData.length > 300) {
+        tbody.innerHTML += `<tr><td colspan="10" class="px-4 py-3 text-center text-xs text-slate-400">Showing first 300 of ${filteredData.length} records. Use filters or download Excel for full data.</td></tr>`;
+      }
+    }
+
+    // ===================== CHARTS =====================
+    function renderCharts() {
+      // APPT pie
+      const apptCounts = {};
+      ['Agent','Partner','Process','Tech','B2C','BSE'].forEach(k => apptCounts[k] = 0);
+      filteredData.forEach(r => {
+        const raw = (r.appt == null ? '' : String(r.appt)).trim();
+        const a = raw ? raw : 'Not Set';
+        if (apptCounts[a] !== undefined) apptCounts[a]++;
+        else apptCounts[a] = (apptCounts[a] || 0) + 1;
+      });
+      const labels = Object.keys(apptCounts).filter(k => apptCounts[k] > 0);
+      const values = labels.map(k => apptCounts[k]);
+      const colors = labels.map(k => APPT_COLORS[k] || '#94a3b8');
+
+      if (apptChart) apptChart.destroy();
+      const ctx1 = document.getElementById('apptChart').getContext('2d');
+      apptChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 14, padding: 16, font: { size: 13 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw} (${((ctx.raw/filteredData.length)*100).toFixed(1)}%)` } }
+          }
+        }
+      });
+      document.getElementById('apptLegend').innerHTML = labels.map((l,i) =>
+        `<span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full" style="background:${colors[i]}"></span>${l} (${values[i]})</span>`
+      ).join('');
+
+      // Status bar
+      const s = computeStats(filteredData);
+      if (statusChart) statusChart.destroy();
+      const statusEl = document.getElementById('statusChart');
+      if (statusEl) {
+      const ctx2 = statusEl.getContext('2d');
+      statusChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: ['Agreed', 'Not Agreed', 'RNR (Callable)', 'NC'],
+          datasets: [{
+            data: [s.agreed, s.notAgreed, s.rnr, s.nc],
+            backgroundColor: ['#0d9488', '#ef4444', '#f59e0b', '#94a3b8'],
+            borderRadius: 8,
+            maxBarThickness: 48
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+      } // end statusEl
+
+      // ===== Month-wise charts (use ALL data for trend, respect current filters where possible) =====
+      // For month trends we use full allData but respect agent/appt filters if set
+      let trendSource = allData;
+      const monthF = document.getElementById('filterMonth').value;
+      const apptF = document.getElementById('filterAppt').value;
+      // Agent filter already applied via selectedAgents
+      trendSource = allData.filter(r => {
+        if (selectedAgents.size && !selectedAgents.has(r.support_agent)) return false;
+        if (apptF && r.appt !== apptF) return false;
+        return true;
+      });
+
+      const months = sortMonths([...new Set(trendSource.map(r => r.month).filter(Boolean))]);
+
+      // Per-month stats
+      const monthStats = months.map(m => {
+        const md = trendSource.filter(r => r.month === m);
+        return { month: m, ...computeStats(md) };
+      });
+
+      // Chart: Total DSAT vs Callable (RNR) vs Connected
+      if (dsatVsCallableChart) dsatVsCallableChart.destroy();
+      const el1 = document.getElementById('dsatVsCallableChart');
+      if (el1) {
+        dsatVsCallableChart = new Chart(el1.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: 'Total DSAT',
+                data: monthStats.map(x => x.dsat),
+                backgroundColor: '#0a4e9b',
+                borderRadius: 6,
+                maxBarThickness: 36
+              },
+              {
+                label: 'Connected',
+                data: monthStats.map(x => x.connected),
+                backgroundColor: '#3b82f6',
+                borderRadius: 6,
+                maxBarThickness: 36
+              },
+              {
+                label: 'Callable',
+                data: monthStats.map(x => x.callable),
+                backgroundColor: '#0a4e9b',
+                borderRadius: 6,
+                maxBarThickness: 36
+              },
+              {
+                label: 'RNR',
+                data: monthStats.map(x => x.rnr),
+                backgroundColor: '#f59e0b',
+                borderRadius: 6,
+                maxBarThickness: 36
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
+              tooltip: {
+                callbacks: {
+                  afterBody: (items) => {
+                    const i = items[0].dataIndex;
+                    const st = monthStats[i];
+                    return [
+                      `Agreed: ${st.agreed}`,
+                      `Not Agreed: ${st.notAgreed}`,
+                      `NC: ${st.nc}`,
+                      `Conversion: ${st.conversion}%`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Chart: Agreed count + Conversion % (dual axis)
+      if (agreedVsConvChart) agreedVsConvChart.destroy();
+      const el2 = document.getElementById('agreedVsConvChart');
+      if (el2) {
+        agreedVsConvChart = new Chart(el2.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: months,
+            datasets: [
+              {
+                type: 'bar',
+                label: 'Agreed',
+                data: monthStats.map(x => x.agreed),
+                backgroundColor: '#0d9488',
+                borderRadius: 6,
+                maxBarThickness: 40,
+                yAxisID: 'y'
+              },
+              {
+                type: 'line',
+                label: 'Conversion %',
+                data: monthStats.map(x => parseFloat(x.conversion)),
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139,92,246,0.15)',
+                borderWidth: 3,
+                pointRadius: 5,
+                pointBackgroundColor: '#8b5cf6',
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    if (ctx.dataset.label === 'Conversion %') return `Conversion: ${ctx.raw}%`;
+                    return `${ctx.dataset.label}: ${ctx.raw}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                type: 'linear',
+                position: 'left',
+                beginAtZero: true,
+                title: { display: true, text: 'Agreed Count', font: { size: 11 } },
+                ticks: { precision: 0 },
+                grid: { color: '#f1f5f9' }
+              },
+              y1: {
+                type: 'linear',
+                position: 'right',
+                beginAtZero: true,
+                max: 100,
+                title: { display: true, text: 'Conversion %', font: { size: 11 } },
+                ticks: { callback: v => v + '%' },
+                grid: { drawOnChartArea: false }
+              },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Main Conversion Trend (line) - chronological
+      if (mainConvTrendChart) mainConvTrendChart.destroy();
+      const el3 = document.getElementById('mainConvTrendChart');
+      if (el3) {
+        mainConvTrendChart = new Chart(el3.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [{
+              label: 'Conversion %',
+              data: monthStats.map(x => parseFloat(x.conversion)),
+              borderColor: '#0a4e9b',
+              backgroundColor: 'rgba(10,78,155,0.12)',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              pointBackgroundColor: '#0a4e9b',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              borderWidth: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `Conversion: ${ctx.raw}%`,
+                  afterLabel: (ctx) => {
+                    const st = monthStats[ctx.dataIndex];
+                    return [
+                      `Total DSAT: ${st.dsat}`,
+                      `Callable: ${st.callable}`,
+                      `Agreed: ${st.agreed}`,
+                      `Connected: ${st.connected}`,
+                      `RNR: ${st.rnr}`,
+                      `NC: ${st.nc}`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { callback: v => v + '%' },
+                grid: { color: '#f1f5f9' }
+              },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+    }
+
+    // ===================== MONTHLY =====================
+    function renderMonthly() {
+      const month = document.getElementById('monthlyMonth').value;
+      const agentFilter = document.getElementById('monthlyAgent').value;
+      let data = allData;
+      if (month) data = data.filter(r => r.month === month);
+      if (agentFilter) data = data.filter(r => r.support_agent === agentFilter);
+
+      const s = computeStats(data);
+      document.getElementById('monthlyStats').innerHTML = `
+        <div class="bg-white rounded-2xl p-4 shadow-sm border"><p class="text-xs text-slate-500 uppercase">Total DSAT</p><p class="text-2xl font-bold">${s.dsat}</p></div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border"><p class="text-xs text-slate-500 uppercase">Callable</p><p class="text-2xl font-bold text-violet-600">${s.callable}</p></div>
+        <div class="bg-white rounded-2xl p-4 shadow-sm border"><p class="text-xs text-slate-500 uppercase">Agreed</p><p class="text-2xl font-bold text-emerald-600">${s.agreed}</p></div>
+        <div class="bg-[#ccecf8]/30 rounded-2xl p-4 shadow-sm border border-[#0a4e9b]/20"><p class="text-xs text-[#0a4e9b] uppercase">Conversion (Converted÷Callable)</p><p class="text-2xl font-bold text-[#002e5b]">${s.conversion}%</p></div>
+      `;
+
+      // Agent summary table
+      const byAgent = {};
+      data.forEach(r => {
+        const a = r.support_agent || 'Unknown';
+        if (!byAgent[a]) byAgent[a] = [];
+        byAgent[a].push(r);
+      });
+      const tbody = document.getElementById('monthlyAgentTable');
+      const sorted = Object.keys(byAgent).sort();
+      tbody.innerHTML = sorted.map(a => {
+        const st = computeStats(byAgent[a]);
+        return `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openAgentDrilldown('${String(a).replace(/'/g, "\\'")}', '${String(month).replace(/'/g, "\\'")}')" title="Click to view this agent's tickets">
+          <td class="px-4 py-2.5 font-medium text-[#0a4e9b] underline decoration-dotted">${a}</td>
+          <td class="px-4 py-2.5 text-xs">${getManagerForAgent(a) || '—'}</td>
+          <td class="px-4 py-2.5">${st.dsat}</td>
+          <td class="px-4 py-2.5 text-violet-600">${st.callable}</td>
+          <td class="px-4 py-2.5 text-emerald-600 font-medium">${st.agreed}</td>
+          <td class="px-4 py-2.5 text-red-500">${st.notAgreed}</td>
+          <td class="px-4 py-2.5 text-amber-500">${st.rnr}</td>
+          <td class="px-4 py-2.5 text-slate-500">${st.nc}</td>
+          <td class="px-4 py-2.5 font-semibold">${st.conversion}%</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="9" class="px-4 py-8 text-center text-slate-400">No data</td></tr>';
+
+      // Trend chart - all months
+      const months = sortMonths([...new Set(allData.map(r => r.month).filter(Boolean))]);
+      const convData = months.map(m => {
+        const md = allData.filter(r => r.month === m);
+        return parseFloat(computeStats(md).conversion);
+      });
+      if (monthlyTrendChart) monthlyTrendChart.destroy();
+      monthlyTrendChart = new Chart(document.getElementById('monthlyTrendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: months,
+          datasets: [{
+            label: 'Conversion %',
+            data: convData,
+            borderColor: '#0a4e9b',
+            backgroundColor: 'rgba(10,78,155,0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: '#0a4e9b'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // Agent performance bar for selected month
+      const agentLabels = sorted.slice(0, 15);
+      const agentConv = agentLabels.map(a => parseFloat(computeStats(byAgent[a]).conversion));
+      if (agentPerfChart) agentPerfChart.destroy();
+      const agentPerfEl = document.getElementById('agentPerfChart');
+      if (agentPerfEl) {
+      agentPerfChart = new Chart(agentPerfEl.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: agentLabels,
+          datasets: [{
+            label: 'Conversion %',
+            data: agentConv,
+            backgroundColor: '#0a4e9b',
+            borderRadius: 6,
+            maxBarThickness: 28
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+      } // end agentPerfEl
+    }
+
+    // ===================== SEARCH PAGE =====================
+    function runTicketSearch() {
+      const t = (document.getElementById('searchTicket').value || '').toLowerCase();
+      const a = (document.getElementById('searchArn').value || '').toLowerCase();
+      const p = (document.getElementById('searchPartner').value || '').toLowerCase();
+      let results = allData;
+      if (t) results = results.filter(r => String(r.ticket_no).toLowerCase().includes(t));
+      if (a) results = results.filter(r => String(r.arn).toLowerCase().includes(a));
+      if (p) results = results.filter(r => String(r.partner_name).toLowerCase().includes(p));
+      const tbody = document.getElementById('searchTableBody');
+      if (!results.length) {
+        tbody.innerHTML = `<tr><td colspan="11" class="px-4 py-10 text-center text-slate-400">No matching tickets</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = results.slice(0, 200).map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2.5 font-medium text-[#0a4e9b]">${r.ticket_no}</td>
+          <td class="px-4 py-2.5">${r.month}</td>
+          <td class="px-4 py-2.5 text-[#0a4e9b] underline decoration-dotted cursor-pointer" onclick="openAgentDrilldown('${String(r.support_agent).replace(/'/g, "\\'")}', '')" title="Click to view all tickets for this agent">${r.support_agent}</td>
+          <td class="px-4 py-2.5 text-xs">${getManagerForAgent(r.support_agent) || '—'}</td>
+          <td class="px-4 py-2.5">${r.csat}</td>
+          <td class="px-4 py-2.5">${r.revised_rating ?? '—'}</td>
+          <td class="px-4 py-2.5">${r.appt}</td>
+          <td class="px-4 py-2.5">${statusBadge(r.agreed_status)}</td>
+          <td class="px-4 py-2.5 text-xs">${r.partner_name || '—'}</td>
+          <td class="px-4 py-2.5 text-xs max-w-[180px] truncate" title="${r.comments||''}">${r.comments || '—'}</td>
+          <td class="px-4 py-2.5 text-xs max-w-[220px] truncate" title="${r.detailed_explanation||''}">${r.detailed_explanation || '—'}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ===================== ADD DATA =====================
+    function handleAddSubmit(e) {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const rec = {
+        created_date: new Date().toISOString().slice(0,10),
+        calling_date: new Date().toISOString().slice(0,10),
+        month: fd.get('month'),
+        ticket_no: fd.get('ticket_no'),
+        csat: Number(fd.get('csat')),
+        support_agent: fd.get('support_agent'),
+        manager: getManagerForAgent(fd.get('support_agent')),
+        classification: fd.get('classification') || '',
+        arn: fd.get('arn') || '',
+        partner_name: fd.get('partner_name') || '',
+        ticket_closed_at: '',
+        comments: fd.get('comments') || '',
+        revised_rating: fd.get('revised_rating') ? Number(fd.get('revised_rating')) : null,
+        appt: fd.get('appt'),
+        reason_remarks: fd.get('reason_remarks') || '',
+        agreed_status: fd.get('agreed_status'),
+        done_by: fd.get('done_by') || ''
+      };
+      allData.unshift(rec);
+      saveData();
+      populateFilters();
+      applyFilters();
+      e.target.reset();
+      alert('Record added successfully! It is now visible in MIS.');
+      showPage('mis');
+    }
+
+    function handleQuickAdd(e) {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const rec = {
+        created_date: new Date().toISOString().slice(0,10),
+        calling_date: new Date().toISOString().slice(0,10),
+        month: fd.get('month'),
+        ticket_no: fd.get('ticket_no'),
+        csat: Number(fd.get('csat') || 3),
+        support_agent: fd.get('support_agent'),
+        manager: getManagerForAgent(fd.get('support_agent')),
+        classification: '',
+        arn: '',
+        partner_name: '',
+        ticket_closed_at: '',
+        comments: '',
+        revised_rating: null,
+        appt: fd.get('appt'),
+        reason_remarks: '',
+        agreed_status: fd.get('agreed_status'),
+        done_by: ''
+      };
+      allData.unshift(rec);
+      saveData();
+      populateFilters();
+      applyFilters();
+      closeAddModal();
+      e.target.reset();
+      alert('Quick record added!');
+    }
+
+    function addNewMonth() {
+      const m = (document.getElementById('newMonthInput').value || '').trim();
+      if (!m) return alert('Enter month label e.g. Oct\'26');
+      // Add a dummy placeholder so month appears in lists
+      const exists = allData.some(r => r.month === m);
+      if (exists) return alert('Month already exists');
+      // Just ensure dropdowns get it — we can push a hidden marker or simply re-populate after user adds real data.
+      // For UX: temporarily push a zero record that we can ignore, or better — store extra months.
+      let extraMonths = JSON.parse(localStorage.getItem('dsat_extra_months') || '[]');
+      if (!extraMonths.includes(m)) {
+        extraMonths.push(m);
+        localStorage.setItem('dsat_extra_months', JSON.stringify(extraMonths));
+      }
+      // Force into selects
+      ['filterMonth','monthlyMonth','addMonthSelect','quickMonth'].forEach(id => {
+        const sel = document.getElementById(id);
+        if ([...sel.options].some(o => o.value === m)) return;
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        sel.appendChild(opt);
+      });
+      document.getElementById('newMonthInput').value = '';
+      alert(`Month "${m}" added. You can now add tickets for this month.`);
+    }
+
+    function openAddModal() {
+      populateFilters();
+      document.getElementById('addModal').classList.remove('hidden');
+      document.getElementById('addModal').classList.add('flex');
+    }
+    function closeAddModal() {
+      document.getElementById('addModal').classList.add('hidden');
+      document.getElementById('addModal').classList.remove('flex');
+    }
+
+    // ===================== TICKET DRILL-DOWN =====================
+    function openAgentDrilldown(agent, month) {
+      let tickets = allData;
+      if (agent) tickets = tickets.filter(r => r.support_agent === agent);
+      if (month) tickets = tickets.filter(r => r.month === month);
+      tickets = tickets.slice().sort((x, y) => String(y.ticket_no).localeCompare(String(x.ticket_no)));
+
+      const titleParts = [];
+      if (agent) titleParts.push(agent); else titleParts.push('All Agents');
+      document.getElementById('agentDrilldownTitle').textContent = titleParts.join(' ') + ' — Ticket List';
+      const subtitleParts = [month ? month : 'All months'];
+      if (agent) subtitleParts.push('Manager: ' + (getManagerForAgent(agent) || '—'));
+      subtitleParts.push(tickets.length + ' ticket(s)');
+      document.getElementById('agentDrilldownSubtitle').textContent = subtitleParts.join(' • ');
+
+      const tbody = document.getElementById('agentDrilldownBody');
+      tbody.innerHTML = tickets.length ? tickets.map(r => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2.5 font-medium text-[#0a4e9b]">${r.ticket_no}</td>
+          <td class="px-4 py-2.5">${r.month}</td>
+          <td class="px-4 py-2.5">${r.support_agent}</td>
+          <td class="px-4 py-2.5">${r.csat}</td>
+          <td class="px-4 py-2.5">${r.revised_rating ?? '—'}</td>
+          <td class="px-4 py-2.5">${r.appt}</td>
+          <td class="px-4 py-2.5">${statusBadge(r.agreed_status)}</td>
+          <td class="px-4 py-2.5 text-xs">${r.partner_name || '—'}</td>
+          <td class="px-4 py-2.5 text-xs max-w-[180px] truncate" title="${r.comments||''}">${r.comments || '—'}</td>
+          <td class="px-4 py-2.5 text-xs max-w-[220px] truncate" title="${r.detailed_explanation||''}">${r.detailed_explanation || '—'}</td>
+        </tr>
+      `).join('') : '<tr><td colspan="10" class="px-4 py-8 text-center text-slate-400">No tickets found</td></tr>';
+
+      document.getElementById('agentDrilldownModal').classList.remove('hidden');
+      document.getElementById('agentDrilldownModal').classList.add('flex');
+    }
+    function closeAgentDrilldown() {
+      document.getElementById('agentDrilldownModal').classList.add('hidden');
+      document.getElementById('agentDrilldownModal').classList.remove('flex');
+    }
+
+    // ===================== DOWNLOAD EXCEL =====================
+    function downloadExcel() {
+      const data = filteredData.length ? filteredData : allData;
+      const rows = data.map(r => ({
+        'Created date': r.created_date,
+        'Calling date': r.calling_date,
+        'Month': r.month,
+        'Ticket No': r.ticket_no,
+        'CSAT': r.csat,
+        'Manager': (r.manager || (typeof getManagerForAgent==='function' ? getManagerForAgent(r.support_agent) : '') || ''),
+        'Support Agent': r.support_agent,
+        'Classification': r.classification,
+        'ARN': r.arn,
+        'Partner Name': r.partner_name,
+        'Ticket Closed At': r.ticket_closed_at,
+        'Comments': r.comments,
+        'Revised rating': r.revised_rating,
+        'APPT': r.appt,
+        'Reason Remarks': r.reason_remarks,
+        'Agreed/ Not agreed': r.agreed_status,
+        'Done by': r.done_by
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'DSAT Data');
+      // Also add summary sheet
+      const s = computeStats(data);
+      const summary = [
+        { Metric: 'Total DSAT', Value: s.dsat },
+        { Metric: 'Connected', Value: s.connected },
+        { Metric: 'Agreed', Value: s.agreed },
+        { Metric: 'Converted (Agreed & Rev>CSAT)', Value: s.converted },
+        { Metric: 'Not Agreed', Value: s.notAgreed },
+        { Metric: 'RNR', Value: s.rnr },
+        { Metric: 'Callable (Agreed+Not Agreed+RNR)', Value: s.callable },
+        { Metric: 'Not Callable (NC)', Value: s.nc },
+        { Metric: 'Conversion % (Converted÷Callable)', Value: s.conversion + '%' },
+        { Metric: 'Agreed % of Total DSAT', Value: s.dsatConv + '%' }
+      ];
+      const ws2 = XLSX.utils.json_to_sheet(summary);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+      XLSX.writeFile(wb, `DSAT_MIS_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+
+    // ===================== IMPORT EXCEL =====================
+    function handleImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+          if (!rows.length) {
+            alert('No rows found in file');
+            return;
+          }
+          // Flexible column mapping
+          const colMap = buildColMap(Object.keys(rows[0]));
+          let added = 0, skipped = 0;
+          const existingTickets = new Set(allData.map(r => String(r.ticket_no)));
+
+          rows.forEach(row => {
+            const ticket = String(getVal(row, colMap, 'ticket_no') || '').trim();
+            if (!ticket) return;
+            if (existingTickets.has(ticket)) {
+              skipped++;
+              return;
+            }
+            const rec = {
+              created_date: String(getVal(row, colMap, 'created_date') || new Date().toISOString().slice(0,10)),
+              calling_date: String(getVal(row, colMap, 'calling_date') || ''),
+              month: String(getVal(row, colMap, 'month') || ''),
+              ticket_no: ticket,
+              csat: Number(getVal(row, colMap, 'csat') || 3),
+              support_agent: String(getVal(row, colMap, 'support_agent') || '').trim(),
+              manager: (function(){ const a = String(getVal(row, colMap, 'support_agent') || '').trim(); const m = String(getVal(row, colMap, 'manager') || '').trim(); return m || getManagerForAgent(a); })(),
+              classification: String(getVal(row, colMap, 'classification') || ''),
+              arn: String(getVal(row, colMap, 'arn') || ''),
+              partner_name: String(getVal(row, colMap, 'partner_name') || ''),
+              ticket_closed_at: String(getVal(row, colMap, 'ticket_closed_at') || ''),
+              comments: String(getVal(row, colMap, 'comments') || ''),
+              // Manual fields — left empty for user to fill after import
+              revised_rating: null,
+              appt: '',
+              reason_remarks: '',
+              agreed_status: '',
+              done_by: '',
+              _pending: true
+            };
+            allData.unshift(rec);
+            existingTickets.add(ticket);
+            added++;
+          });
+
+          ensureManagersOnData();
+          saveData();
+          populateFilters();
+          applyFilters();
+          renderManualUpdateTable();
+          alert(`Import complete\\n✓ Added: ${added} new tickets\\n⊘ Skipped (already exist): ${skipped}\\n\\nNow go to "Calling Log / Add Data" and fill Revised rating, APPT, Status, Done by for new rows.`);
+          showPage('add');
+        } catch (err) {
+          console.error(err);
+          alert('Import failed: ' + err.message);
+        }
+        event.target.value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function buildColMap(headers) {
+      const map = {};
+      const aliases = {
+        ticket_no: ['ticket no', 'ticket_no', 'ticket', 'ticket number', 'ticketno'],
+        created_date: ['created date', 'created_date', 'created'],
+        calling_date: ['calling date', 'calling_date', 'calling'],
+        month: ['month'],
+        csat: ['csat', 'rating', 'score'],
+        support_agent: ['support agent', 'support_agent', 'agent', 'supportagent'],
+        manager: ['manager', 'manager name', 'tl', 'team lead', 'reporting manager'],
+        classification: ['classification', 'category'],
+        arn: ['arn'],
+        partner_name: ['partner name', 'partner_name', 'partner'],
+        ticket_closed_at: ['ticket closed at', 'ticket_closed_at', 'closed at', 'closed'],
+        comments: ['comments', 'comment'],
+        revised_rating: ['revised rating', 'revised_rating', 'revised rating ', 'revised'],
+        appt: ['appt', 'appt category'],
+        reason_remarks: ['reason  remarks', 'reason remarks', 'reason_remarks', 'reason', 'remarks'],
+        agreed_status: ['agreed/ not agreed', 'agreed/not agreed', 'agreed_status', 'agreed', 'status', 'agreed not agreed'],
+        done_by: ['done by', 'done_by', 'doneby']
+      };
+      // Exact header match (case-insensitive) for user's daily export format:
+      // Created date | Calling date | Month | Ticket No | CSAT | Support Agent | Classification | ARN | Partner Name | Ticket Closed At | Comments
+      headers.forEach(h => {
+        const key = String(h).toLowerCase().trim();
+        for (const [field, list] of Object.entries(aliases)) {
+          if (list.includes(key) || key.replace(/\\s+/g,'_') === field) {
+            map[field] = h;
+            break;
+          }
+        }
+      });
+      return map;
+    }
+
+    function getVal(row, colMap, field) {
+      const col = colMap[field];
+      if (!col) return '';
+      return row[col];
+    }
+
+    function parseRevised(v) {
+      if (v === '' || v === null || v === undefined) return null;
+      const n = Number(v);
+      return isNaN(n) ? null : n;
+    }
+
+    function normalizeAppt(v) {
+      const s = String(v || '').trim();
+      if (!s) return '';
+      const lower = s.toLowerCase();
+      if (lower.includes('agent')) return 'Agent';
+      if (lower.includes('partner')) return 'Partner';
+      if (lower.includes('process')) return 'Process';
+      if (lower.includes('tech')) return 'Tech';
+      if (lower.includes('b2c')) return 'B2C';
+      if (lower.includes('bse')) return 'BSE';
+      return s;
+    }
+
+    function normalizeStatus(v) {
+      const s = String(v || '').trim().toLowerCase();
+      if (!s) return '';
+      if (s === 'agreed') return 'Agreed';
+      if (s.includes('not agree')) return 'Not Agreed';
+      if (s === 'rnr' || s.includes('callable')) return 'RNR';
+      if (s === 'nc' || s.includes('not connect') || s.includes('not callable')) return 'NC';
+      return String(v).trim();
+    }
+
+    // ===================== MANUAL UPDATE TABLE =====================
+    function renderManualUpdateTable(pendingOnly = false) {
+      const tbody = document.getElementById('manualUpdateBody');
+      if (!tbody) return;
+
+      // Populate month filter options
+      const monthSel = document.getElementById('manualMonthFilter');
+      if (monthSel) {
+        const currentMonth = monthSel.value;
+        const months = sortMonths([...new Set(allData.map(r => r.month).filter(Boolean))]);
+        monthSel.innerHTML = '<option value="">All Months</option>';
+        months.forEach(m => {
+          const o = document.createElement('option');
+          o.value = m;
+          o.textContent = m;
+          monthSel.appendChild(o);
+        });
+        if (currentMonth && months.includes(currentMonth)) monthSel.value = currentMonth;
+      }
+      const monthFilter = monthSel ? monthSel.value : '';
+      const statusSel = document.getElementById('manualStatusFilter');
+      const statusFilter = statusSel ? statusSel.value : '';
+
+      let rows = allData.slice();
+      if (monthFilter) {
+        rows = rows.filter(r => r.month === monthFilter);
+      }
+      if (statusFilter === '__blank__') {
+        rows = rows.filter(r => !r.agreed_status || String(r.agreed_status).trim() === '');
+      } else if (statusFilter) {
+        rows = rows.filter(r => {
+          const s = String(r.agreed_status || '').trim();
+          if (statusFilter === 'Not Agreed') return s === 'Not Agreed' || s === 'Not agreed';
+          return s === statusFilter;
+        });
+      }
+      const mgrFilter = document.getElementById('manualManagerFilter')?.value || '';
+      if (mgrFilter === '__blank__') {
+        rows = rows.filter(r => !(r.manager || getManagerForAgent(r.support_agent)));
+      } else if (mgrFilter) {
+        rows = rows.filter(r => (r.manager || getManagerForAgent(r.support_agent)) === mgrFilter);
+      }
+      if (pendingOnly) {
+        rows = rows.filter(r => r._pending || !r.agreed_status || !r.appt);
+      }
+      // Show latest 300 for selected month (easier bulk update)
+      const totalFiltered = rows.length;
+      rows = rows.slice(0, 300);
+      const pendingN = allData.filter(r => {
+        if (monthFilter && r.month !== monthFilter) return false;
+        return r._pending || !r.agreed_status;
+      }).length;
+      const pc = document.getElementById('pendingCount');
+      if (pc) {
+        let label = [];
+        if (monthFilter) label.push(monthFilter);
+        if (statusFilter && statusFilter !== '__blank__') label.push(statusFilter);
+        if (statusFilter === '__blank__') label.push('Blank');
+        pc.textContent = (label.length ? label.join(' · ') + ': ' : '') + totalFiltered + ' records (showing ' + rows.length + ') · ' + pendingN + ' may need update';
+      }
+
+      function makeOpts(list, selected) {
+        return list.map(v => `<option value="${v}" ${String(v) === String(selected ?? '') ? 'selected' : ''}>${v || '—'}</option>`).join('');
+      }
+
+      // Month options: existing data months + common upcoming
+      let monthOptions = sortMonths([...new Set(allData.map(r => r.month).filter(Boolean))]);
+      try {
+        const extraM = JSON.parse(localStorage.getItem('dsat_extra_months') || '[]');
+        monthOptions = sortMonths([...new Set([...monthOptions, ...extraM])]);
+      } catch(e) {}
+      // Always include a blank option at front via makeOpts(['', ...])
+      const baseMonths = ['Apr\'26','May\'26','Jun\'26','Jul\'26','Aug\'26','Sep\'26','Oct\'26','Nov\'26','Dec\'26','Jan\'27','Feb\'27','Mar\'27'];
+      monthOptions = sortMonths([...new Set([...baseMonths, ...monthOptions])]);
+      monthOptions = ['', ...monthOptions];
+
+      tbody.innerHTML = rows.map((r) => {
+        const realIdx = allData.indexOf(r);
+        return `<tr class="hover:bg-slate-50" data-idx="${realIdx}">
+          <td class="px-3 py-2 font-medium text-[#0a4e9b]">${r.ticket_no}</td>
+          <td class="px-3 py-1.5">
+            <select class="mu-month form-input w-24 px-1 py-1 border border-slate-200 rounded-lg text-xs">
+              ${makeOpts(monthOptions, r.month)}
+            </select>
+          </td>
+          <td class="px-3 py-2 text-xs">${r.support_agent || '—'}</td>
+          <td class="px-2 py-1.5 w-28 max-w-[7rem]">
+            <select class="mu-manager form-input w-full max-w-[7rem] px-1 py-1 border border-slate-200 rounded-lg text-[11px] truncate" title="${(r.manager || getManagerForAgent(r.support_agent) || '').replace(/"/g,'&quot;')}">
+              ${makeOpts(['','Arun Pandi R M','Mohammed Shoaib Hussain L','Sadham Khaleel Hussain','John Bosco J'], r.manager || getManagerForAgent(r.support_agent))}
+            </select>
+          </td>
+          <td class="px-3 py-2">${r.csat}</td>
+          <td class="px-3 py-2 text-xs max-w-[100px] truncate" title="${(r.partner_name||'').replace(/"/g,'&quot;')}">${r.partner_name || '—'}</td>
+          <td class="px-3 py-1.5">
+            <select class="mu-revised form-input w-20 px-1 py-1 border border-slate-200 rounded-lg text-xs">
+              ${makeOpts(['','3','4','5'], r.revised_rating)}
+            </select>
+          </td>
+          <td class="px-3 py-1.5">
+            <select class="mu-appt form-input w-24 px-1 py-1 border border-slate-200 rounded-lg text-xs">
+              ${makeOpts(['','Agent','Partner','Process','Tech','B2C','BSE'], r.appt)}
+            </select>
+          </td>
+          <td class="px-3 py-1.5">
+            <input class="mu-reason form-input w-32 px-1.5 py-1 border border-slate-200 rounded-lg text-xs" value="${(r.reason_remarks || '').replace(/"/g, '&quot;')}" placeholder="Short reason" />
+          </td>
+          <td class="px-3 py-1.5">
+            <input class="mu-detail form-input w-44 px-1.5 py-1 border border-slate-200 rounded-lg text-xs" value="${(r.detailed_explanation || '').replace(/"/g, '&quot;')}" placeholder="Detailed explanation..." />
+          </td>
+          <td class="px-3 py-1.5">
+            <select class="mu-status form-input w-28 px-1 py-1 border border-slate-200 rounded-lg text-xs">
+              ${makeOpts(['','Agreed','Not Agreed','RNR','NC'], r.agreed_status)}
+            </select>
+          </td>
+          <td class="px-3 py-1.5">
+            <input class="mu-doneby form-input w-24 px-1.5 py-1 border border-slate-200 rounded-lg text-xs" value="${(r.done_by || '').replace(/"/g, '&quot;')}" />
+          </td>
+          <td class="px-3 py-1.5">
+            <button type="button" onclick="deleteRecord(${realIdx})" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg text-xs font-medium" title="Delete this record">
+              <i class="fas fa-trash-alt"></i> Delete
+            </button>
+          </td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="13" class="px-4 py-8 text-center text-slate-400">No records. Import an Excel file first.</td></tr>';
+
+    }
+
+    function saveManualUpdates() {
+      const tbody = document.getElementById('manualUpdateBody');
+      let updated = 0;
+      tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+        const idx = Number(tr.dataset.idx);
+        if (isNaN(idx) || !allData[idx]) return;
+        const month = tr.querySelector('.mu-month')?.value;
+        const rev = tr.querySelector('.mu-revised')?.value;
+        const appt = tr.querySelector('.mu-appt')?.value;
+        const reason = tr.querySelector('.mu-reason')?.value;
+        const detail = tr.querySelector('.mu-detail')?.value;
+        const status = tr.querySelector('.mu-status')?.value;
+        const doneby = tr.querySelector('.mu-doneby')?.value;
+
+        if (month !== undefined) allData[idx].month = month || '';
+        const mgr = tr.querySelector('.mu-manager')?.value;
+        if (mgr !== undefined) allData[idx].manager = mgr || getManagerForAgent(allData[idx].support_agent);
+        allData[idx].revised_rating = rev ? Number(rev) : null;
+        allData[idx].appt = appt || '';
+        allData[idx].reason_remarks = reason || '';
+        allData[idx].detailed_explanation = detail || '';
+        allData[idx].agreed_status = status || '';
+        allData[idx].done_by = doneby || '';
+        if (status) delete allData[idx]._pending;
+        updated++;
+      });
+      saveData();
+      applyFilters();
+      renderManualUpdateTable();
+      alert(`Saved data for ${updated} rows. MIS dashboard is refreshed.`);
+    }
+
+    function filterPendingOnly() {
+      renderManualUpdateTable(true);
+    }
+
+    function downloadManualData() {
+      // Respect month + status filters currently selected on Calling Log
+      const monthFilter = document.getElementById('manualMonthFilter')?.value || '';
+      const statusFilter = document.getElementById('manualStatusFilter')?.value || '';
+      let rows = allData.slice();
+      if (monthFilter) rows = rows.filter(r => r.month === monthFilter);
+      if (statusFilter === '__blank__') {
+        rows = rows.filter(r => !r.agreed_status || String(r.agreed_status).trim() === '');
+      } else if (statusFilter) {
+        rows = rows.filter(r => {
+          const s = String(r.agreed_status || '').trim();
+          if (statusFilter === 'Not Agreed') return s === 'Not Agreed' || s === 'Not agreed';
+          return s === statusFilter;
+        });
+      }
+
+      if (!rows.length) {
+        alert('No rows to download for the current filters.');
+        return;
+      }
+
+      const exportRows = rows.map(r => ({
+        'Created date': r.created_date || '',
+        'Calling date': r.calling_date || '',
+        'Month': r.month || '',
+        'Ticket No': r.ticket_no || '',
+        'CSAT': r.csat ?? '',
+        'Support Agent': r.support_agent || '',
+        'Manager': r.manager || getManagerForAgent(r.support_agent) || '',
+        'Classification': r.classification || '',
+        'ARN': r.arn || '',
+        'Partner Name': r.partner_name || '',
+        'Ticket Closed At': r.ticket_closed_at || '',
+        'Comments': r.comments || '',
+        'Revised rating': r.revised_rating ?? '',
+        'APPT': r.appt || '',
+        'Reason Remarks': r.reason_remarks || '',
+        'Detailed Explanation': r.detailed_explanation || '',
+        'Agreed/ Not agreed': r.agreed_status || '',
+        'Done by': r.done_by || ''
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Updated DSAT');
+      const suffix = monthFilter ? monthFilter.replace(/'/g, '') : 'All';
+      const name = 'DSAT_Updated_' + suffix + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+      XLSX.writeFile(wb, name);
+    }
+
+
+    function deleteRecord(idx) {
+      if (idx < 0 || idx >= allData.length) return;
+      const rec = allData[idx];
+      const label = (rec.ticket_no || 'this record') + (rec.support_agent ? ' (' + rec.support_agent + ')' : '');
+      if (!confirm('Delete ticket ' + label + '?\n\nThis cannot be undone.')) return;
+      allData.splice(idx, 1);
+      saveData();
+      applyFilters();
+      renderManualUpdateTable();
+      // small toast
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-6 right-6 bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg z-50 text-sm';
+      t.textContent = 'Deleted ticket ' + (rec.ticket_no || '');
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2500);
+    }
+
+    function findDuplicates() {
+      const seen = {};
+      const dups = [];
+      allData.forEach((r, i) => {
+        const key = String(r.ticket_no || '').trim();
+        if (!key) return;
+        if (seen[key] !== undefined) {
+          dups.push({ ticket: key, indices: [seen[key], i] });
+        } else {
+          seen[key] = i;
+        }
+      });
+      if (!dups.length) {
+        alert('No duplicate Ticket Nos found.');
+        return;
+      }
+      // Highlight duplicate rows in manual table
+      renderManualUpdateTable(false);
+      const tbody = document.getElementById('manualUpdateBody');
+      if (!tbody) return;
+      const dupTickets = new Set(dups.map(d => d.ticket));
+      tbody.querySelectorAll('tr[data-idx]').forEach(tr => {
+        const idx = Number(tr.dataset.idx);
+        const r = allData[idx];
+        if (r && dupTickets.has(String(r.ticket_no || '').trim())) {
+          tr.classList.add('bg-red-50');
+          tr.style.outline = '1px solid #fca5a5';
+        }
+      });
+      alert(dups.length + ' duplicate Ticket No(s) found. Matching rows highlighted in red. Use Delete to remove extras.');
+    }
+
+
+
+    // ===================== DIMENSION BREAKDOWN =====================
+    function getBreakdownRows() {
+      const dim = document.getElementById('breakdownDim')?.value || 'appt';
+      const groups = {};
+      filteredData.forEach(r => {
+        let key = (r[dim] || '').toString().trim() || '(Blank)';
+        // For reason remarks, keep readable but cap very long
+        if (dim === 'reason_remarks' && key.length > 60) key = key.slice(0, 57) + '...';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(r);
+      });
+      const rows = Object.keys(groups).map(k => {
+        const st = computeStats(groups[k]);
+        return { key: k, ...st };
+      });
+      // Sort by total desc
+      rows.sort((a, b) => b.dsat - a.dsat);
+      return rows;
+    }
+
+    function renderBreakdown() {
+      const rows = getBreakdownRows();
+      const top = rows.slice(0, 15); // top 15 for charts
+
+      // Table
+      const tbody = document.getElementById('breakdownTableBody');
+      if (tbody) {
+        tbody.innerHTML = rows.map(r => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-3 py-2 font-medium max-w-[220px] truncate" title="${r.key}">${r.key}</td>
+            <td class="px-3 py-2">${r.dsat}</td>
+            <td class="px-3 py-2 text-violet-600">${r.callable}</td>
+            <td class="px-3 py-2 text-emerald-600">${r.agreed}</td>
+            <td class="px-3 py-2 text-red-500">${r.notAgreed}</td>
+            <td class="px-3 py-2 text-amber-500">${r.rnr}</td>
+            <td class="px-3 py-2 text-slate-500">${r.nc}</td>
+            <td class="px-3 py-2 font-semibold">${r.conversion}%</td>
+          </tr>
+        `).join('') || '<tr><td colspan="8" class="px-4 py-6 text-center text-slate-400">No data</td></tr>';
+      }
+
+      const labels = top.map(r => r.key.length > 24 ? r.key.slice(0, 22) + '…' : r.key);
+      const palette = ['#0a4e9b','#0d9488','#f59e0b','#ec4899','#3b82f6','#8b5cf6','#14b8a6','#f97316','#64748b','#a855f7','#06b6d4','#84cc16','#e11d48','#0ea5e9','#d946ef'];
+
+      // Volume chart
+      if (breakdownVolChart) breakdownVolChart.destroy();
+      const elV = document.getElementById('breakdownVolChart');
+      if (elV) {
+        breakdownVolChart = new Chart(elV.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Total DSAT', data: top.map(r => r.dsat), backgroundColor: '#0a4e9b', borderRadius: 4, maxBarThickness: 28 },
+              { label: 'Agreed', data: top.map(r => r.agreed), backgroundColor: '#0d9488', borderRadius: 4, maxBarThickness: 28 },
+              { label: 'Callable', data: top.map(r => r.callable), backgroundColor: '#0a4e9b', borderRadius: 4, maxBarThickness: 28 }
+            ]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 10, usePointStyle: true, font: { size: 11 } } } },
+            scales: {
+              x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
+              y: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Conversion % chart
+      if (breakdownConvChart) breakdownConvChart.destroy();
+      const elC = document.getElementById('breakdownConvChart');
+      if (elC) {
+        breakdownConvChart = new Chart(elC.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Conversion %',
+              data: top.map(r => parseFloat(r.conversion)),
+              backgroundColor: top.map((_, i) => palette[i % palette.length]),
+              borderRadius: 4,
+              maxBarThickness: 28
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => `Conversion: ${ctx.raw}%` } }
+            },
+            scales: {
+              x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#f1f5f9' } },
+              y: { grid: { display: false } }
+            }
+          }
+        });
+      }
+    }
+
+    function downloadBreakdownExcel() {
+      const dim = document.getElementById('breakdownDim')?.value || 'appt';
+      const dimLabel = { appt: 'APPT', reason_remarks: 'Reason Remarks', support_agent: 'Agent', classification: 'Classification' }[dim] || dim;
+      const rows = getBreakdownRows().map(r => ({
+        [dimLabel]: r.key,
+        'Total DSAT': r.dsat,
+        'Callable': r.callable,
+        'Agreed': r.agreed,
+        'Not Agreed': r.notAgreed,
+        'RNR': r.rnr,
+        'NC': r.nc,
+        'Conversion % (Converted/Callable)': r.conversion + '%',
+        'Agreed % of Total DSAT': r.dsatConv + '%'
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, dimLabel + ' Breakdown');
+      XLSX.writeFile(wb, `DSAT_Breakdown_${dimLabel}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+
+    // ===================== CONVERSION TAB =====================
+    let convMonthChart = null;
+    let convBarChart = null;
+
+    function renderConversionTab() {
+      // Populate filters once
+      const monthSel = document.getElementById('convMonth');
+      const agentSel = document.getElementById('convAgent');
+      if (monthSel && monthSel.options.length <= 1) {
+        const months = sortMonths([...new Set(allData.map(r => r.month).filter(Boolean))]);
+        months.forEach(m => {
+          const o = document.createElement('option');
+          o.value = m; o.textContent = m;
+          monthSel.appendChild(o);
+        });
+      }
+      if (agentSel && agentSel.options.length <= 1) {
+        const agents = [...new Set(allData.map(r => r.support_agent).filter(Boolean))].sort();
+        agents.forEach(a => {
+          const o = document.createElement('option');
+          o.value = a; o.textContent = a;
+          agentSel.appendChild(o);
+        });
+      }
+
+      const monthF = monthSel ? monthSel.value : '';
+      const agentF = agentSel ? agentSel.value : '';
+      let data = allData.slice();
+      if (monthF) data = data.filter(r => r.month === monthF);
+      if (agentF) data = data.filter(r => r.support_agent === agentF);
+
+      const s = computeStats(data);
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      
+      
+      
+      set('convKpiActual', s.dsat);
+      set('convKpiAgreed', s.agreed);
+      set('convKpiNotAgreed', s.notAgreed);
+      set('convKpiRnr', s.rnr);
+      set('convKpiNc', s.nc);
+
+      // Month-wise table (always full months, respect agent filter only)
+      let base = allData.slice();
+      if (agentF) base = base.filter(r => r.support_agent === agentF);
+      const months = sortMonths([...new Set(base.map(r => r.month).filter(Boolean))]);
+      const rows = months.map(m => {
+        const md = base.filter(r => r.month === m);
+        return { month: m, ...computeStats(md) };
+      });
+
+      const tbody = document.getElementById('convTableBody');
+      if (tbody) {
+        tbody.innerHTML = rows.map(r => `
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-2.5 font-medium">${r.month}</td>
+            <td class="px-4 py-2.5">${r.dsat}</td>
+            <td class="px-4 py-2.5 text-violet-600 font-semibold">${r.callable}</td>
+            <td class="px-4 py-2.5 text-slate-500">${r.nc}</td>
+            <td class="px-4 py-2.5 text-emerald-600">${r.agreed}</td>
+            <td class="px-4 py-2.5 text-red-500">${r.notAgreed}</td>
+            <td class="px-4 py-2.5 text-amber-500">${r.rnr}</td>
+            <td class="px-4 py-2.5 text-emerald-700 font-semibold">${r.converted}</td>
+            <td class="px-4 py-2.5 font-bold text-[#0a4e9b]">${r.conversion}%</td>
+          </tr>
+        `).join('') || '<tr><td colspan="9" class="px-4 py-8 text-center text-slate-400">No data</td></tr>';
+      }
+
+      // Manager-wise pivot: Manager rows × Month columns (Actual + Conv %)
+      const mgrBody = document.getElementById('convManagerTableBody');
+      const mgrHead = document.getElementById('convManagerPivotHead');
+      if (mgrBody) {
+        const mgrOrder = ['Arun Pandi R M','Mohammed Shoaib Hussain L','Sadham Khaleel Hussain','John Bosco J'];
+        let mgrBase = allData.slice();
+        if (typeof agentF !== 'undefined' && agentF) mgrBase = mgrBase.filter(r => r.support_agent === agentF);
+        const mgrMonths = sortMonths([...new Set(mgrBase.map(r => r.month).filter(Boolean))]);
+        if (mgrHead) {
+          mgrHead.innerHTML = '<tr class="text-left text-xs font-semibold text-slate-500 uppercase bg-slate-50">' +
+            '<th class="px-3 py-3" rowspan="2">Manager</th>' +
+            mgrMonths.map(m => '<th class="px-3 py-2 text-center border-l border-slate-200" colspan="2">' + m + '</th>').join('') +
+            '</tr><tr class="text-left text-[10px] font-semibold text-slate-400 uppercase bg-slate-50">' +
+            mgrMonths.map(() => '<th class="px-3 py-1.5 text-center border-l border-slate-100">Actual</th><th class="px-3 py-1.5 text-center">Conv %</th>').join('') +
+            '</tr>';
+        }
+        mgrBody.innerHTML = mgrOrder.map(mgr => {
+          const cells = mgrMonths.map(month => {
+            const rows = mgrBase.filter(r => {
+              if (r.month !== month) return false;
+              const m = (r.manager && String(r.manager).trim()) || (typeof getManagerForAgent === 'function' ? getManagerForAgent(r.support_agent) : '') || '';
+              return m === mgr;
+            });
+            const st = computeStats(rows);
+            return '<td class="px-3 py-2.5 text-center border-l border-slate-100 font-semibold text-slate-800">' + st.dsat + '</td>' +
+              '<td class="px-3 py-2.5 text-center font-bold text-[#0a4e9b]">' + st.conversion + '%</td>';
+          }).join('');
+          return '<tr class="hover:bg-slate-50"><td class="px-3 py-2.5 font-medium text-[#0a4e9b] text-xs">' + mgr + '</td>' + cells + '</tr>';
+        }).join('') || '<tr><td class="px-4 py-8 text-center text-slate-400">No data</td></tr>';
+      }
+
+      // Charts
+      if (convMonthChart) convMonthChart.destroy();
+      const el1 = document.getElementById('convMonthChart');
+      if (el1) {
+        convMonthChart = new Chart(el1.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: rows.map(r => r.month),
+            datasets: [{
+              label: 'Converted %',
+              data: rows.map(r => parseFloat(r.conversion)),
+              borderColor: '#0a4e9b',
+              backgroundColor: 'rgba(10,78,155,0.12)',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 6,
+              pointBackgroundColor: '#0a4e9b',
+              borderWidth: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Converted %: ${c.raw}%` } } },
+            scales: {
+              y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      if (convBarChart) convBarChart.destroy();
+      const el2 = document.getElementById('convBarChart');
+      if (el2) {
+        convBarChart = new Chart(el2.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels: rows.map(r => r.month),
+            datasets: [
+              { label: 'Callable', data: rows.map(r => r.callable), backgroundColor: '#0a4e9b', borderRadius: 6, maxBarThickness: 36 },
+              { label: 'Converted', data: rows.map(r => r.converted), backgroundColor: '#0d9488', borderRadius: 6, maxBarThickness: 36 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } } },
+            scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+    }
+
+    // Start
+    init();
+    // Also render manual table when on add page
+
+  </script>
+</body>
+</html>
