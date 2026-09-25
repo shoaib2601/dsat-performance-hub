@@ -1154,11 +1154,19 @@
         const sheetRecords = csvToRecords(csvText);
         if (!sheetRecords.length) throw new Error('Sheet returned no rows');
 
-        // Preserve any locally-added records (e.g. via "Add Data") not yet present in the sheet.
+        // Preserve locally-added records (e.g. via "Add Data") that have never appeared in the
+        // sheet — but if a ticket WAS in the sheet before and is gone now, treat it as deleted
+        // rather than resurrecting it from the local cache.
         const sheetTicketNos = new Set(sheetRecords.map(r => String(r.ticket_no)));
-        const localOnly = allData.filter(r => !sheetTicketNos.has(String(r.ticket_no)));
+        let previouslySeenTicketNos = [];
+        try { previouslySeenTicketNos = JSON.parse(localStorage.getItem('dsat_last_sheet_ticket_nos') || '[]'); } catch (e) {}
+        const previouslySeenSet = new Set(previouslySeenTicketNos);
+        const localOnly = allData.filter(r =>
+          !sheetTicketNos.has(String(r.ticket_no)) && !previouslySeenSet.has(String(r.ticket_no))
+        );
 
         allData = [...localOnly, ...sheetRecords];
+        localStorage.setItem('dsat_last_sheet_ticket_nos', JSON.stringify([...sheetTicketNos]));
         saveData();
         refreshCurrentPageView();
         setSyncStatus('Synced from Google Sheet ' + new Date().toLocaleTimeString());
